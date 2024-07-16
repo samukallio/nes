@@ -163,6 +163,7 @@ void Unload(machine* M)
 	free(M->APU.AudioBuffer); M->APU.AudioBuffer = nullptr;
 	free(M->PPU.FrameBuffer[0]); M->PPU.FrameBuffer[0] = nullptr;
 	free(M->PPU.FrameBuffer[1]); M->PPU.FrameBuffer[1] = nullptr;
+	memset(M, 0, sizeof(machine));
 	M->IsLoaded = false;
 }
 
