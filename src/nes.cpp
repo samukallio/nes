@@ -56,6 +56,8 @@ void Reset(machine* M)
 	M->PPU.ScanX = 0;
 
 
+	M->APU.AudioPointer = 0;
+
 	M->APU.Noise.NoiseRegister = 0x0001;
 
 	M->CPU.State = 0;
@@ -254,6 +256,8 @@ i32 Load(machine* M, const char* Path)
 	M->APU.AudioBuffer = (u8*)calloc(8192, 1);
 
 	M->IsLoaded = true;
+
+	Reset(M);
 
 	return 0;
 }

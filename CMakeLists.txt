@@ -5,6 +5,7 @@ project(nes)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
 add_subdirectory(vendor/sdl2 EXCLUDE_FROM_ALL)
+add_subdirectory(vendor/nativefiledialog-extended)
 
 add_executable(nes
 	src/main.cpp
@@ -21,4 +22,7 @@ if(TARGET SDL2::SDL2main)
     target_link_libraries(nes PRIVATE SDL2::SDL2main)
 endif()
 
-target_link_libraries(nes PRIVATE SDL2::SDL2-static)
+target_link_libraries(nes
+	PRIVATE SDL2::SDL2-static
+	nfd
+)

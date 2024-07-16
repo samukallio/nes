@@ -7,6 +7,8 @@
 #include <math.h>
 #include <SDL.h>
 
+#include <nfd.h>
+
 #include "nes.h"
 
 #define SCREEN_WIDTH 1024
@@ -16,6 +18,10 @@ struct tas_frame
 {
 	bool    Reset;
 	u8      Buttons[2];
+};
+
+static bool OpenFileDialog(nfdu8char_t** Path)
+{
 };
 
 i32 ReadTASFile(const char* Path, tas_frame** OutFrameData, i32* OutFrameCount)
@@ -68,6 +74,7 @@ int main(int argc, char* args[])
 
 	// Initialize NES
 	machine* M = (machine*)calloc(1, sizeof(machine));
+	memset(M, 0, sizeof(machine));
 
 	// Init video.
 	SDL_Window* Window = SDL_CreateWindow("NES Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
@@ -88,20 +95,15 @@ int main(int argc, char* args[])
 	SDL_AudioDeviceID AudioDeviceID = SDL_OpenAudioDevice(nullptr, 0, &AudioSpec, &ObtainedAudioSpec, 0);
 	SDL_PauseAudioDevice(AudioDeviceID, 0);
 
-	if (Load(M, "../rom/rom.nes") < 0) {
-		printf("failed to load INES file\n");
-		return -1;
-	}
-
-	Reset(M);
-
 	//
 	//tas_frame* TASFrameData = nullptr;
 	//i32 TASFrameCount = 0;
 	//ReadTASFile("tas.txt", &TASFrameData, &TASFrameCount);
 
-	u64 InitialTick = SDL_GetTicks64();
 	u64 CurrentFrame = 0;
+
+	u64 PreviousTime = SDL_GetTicks64();
+	double TimeToNextFrame = 0.0;
 
 	bool Exit = false;
 	bool Paused = false;
@@ -119,6 +121,17 @@ int main(int argc, char* args[])
 				Exit = true;
 				break;
 			}
+			// F1: Open ROM file.
+			if (Event.type == SDL_KEYDOWN && Event.key.keysym.scancode == SDL_SCANCODE_F1) {
+				nfdu8filteritem_t Filter = { "INES ROM", "nes" };
+				nfdu8char_t* Path = nullptr;
+				if (NFD_OpenDialogU8(&Path, &Filter, 1, nullptr) == NFD_OKAY) {
+					Load(M, Path);
+					NFD_FreePathU8(Path);
+					CurrentFrame = 0;
+				}
+			}
+			// T: Open/close debug trace file.
 			if (Event.type == SDL_KEYDOWN && Event.key.keysym.scancode == SDL_SCANCODE_T) {
 				if (M->TraceFile) {
 					printf("Closing trace file\n");
@@ -130,13 +143,16 @@ int main(int argc, char* args[])
 					M->TraceFile = fopen("trace.txt", "wb");
 				}
 			}
+			// P: Pause emulator.
 			if (Event.type == SDL_KEYDOWN && Event.key.keysym.scancode == SDL_SCANCODE_P) {
 				Paused = !Paused;
 			}
+			// F: Step the emulator one frame at a time.
 			if (Event.type == SDL_KEYDOWN && Event.key.keysym.scancode == SDL_SCANCODE_F) {
 				FrameSteppingMode = true;
 				Paused = false;
 			}
+			// G: Cancel frame-stepping.
 			if (Event.type == SDL_KEYDOWN && Event.key.keysym.scancode == SDL_SCANCODE_G) {
 				FrameSteppingMode = false;
 				Paused = false;
@@ -144,6 +160,8 @@ int main(int argc, char* args[])
 		}
 
 		if (Exit) break;
+
+		if (!M->IsLoaded) continue;
 
 		if (!Paused) {
 			const u8* Keys = SDL_GetKeyboardState(nullptr);
@@ -189,9 +207,23 @@ int main(int argc, char* args[])
 		SDL_UnlockSurface(Surface);
 		SDL_UpdateWindowSurface(Window);
 
-		//
-		u64 TargetTick = InitialTick + u64((CurrentFrame + 1) * 1000 / 60.0);
-		while (SDL_GetTicks64() < TargetTick);
+		TimeToNextFrame += 1000.0 / 60.0;
+
+		while (TimeToNextFrame > 0.0) {
+			// Get time elapsed since last call to SDL_GetTicks64().
+			u64 CurrentTime = SDL_GetTicks64();
+			i64 DeltaTime = CurrentTime - PreviousTime;
+			PreviousTime = CurrentTime;
+
+			// Subtract from time to next frame.
+			TimeToNextFrame -= DeltaTime;
+
+			// Don't try to catch up for more than 100 ms when lagging behind.
+			// This is to stop the emulator from going wild if the event loop
+			// was paused (for example, when the open file dialog was active).
+			if (TimeToNextFrame < -100.0)
+				TimeToNextFrame = -100.0;
+		}
 
 		CurrentFrame++;
 	}
