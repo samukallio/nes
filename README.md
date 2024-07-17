@@ -10,7 +10,7 @@ A simple NES emulator written in C++ (or rather, C with some C++ features sprink
 ## Screenshots
 
 <p align="center">
-    <img src="https://samukallio.net/nes/montage.png">
+    <img src="https://samukallio.net/nes/screenshots.png">
 </p>
 
 ## Tests
