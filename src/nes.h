@@ -245,7 +245,7 @@ struct apu_noise
 	u16             TimerPeriod;                // Sequencer clock generator period.
 	u16             Timer;                      // Sequencer clock generator timer.
 	u8              NoiseMode;                  // Noise register feedback mode.
-    u16             NoiseRegister;              // Noise register state.
+	u16             NoiseRegister;              // Noise register state.
 	bool            LengthEnable;               // Length counter decrement enable.
 	u8              Length;                     // Length counter value.
 };
