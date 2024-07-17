@@ -52,8 +52,8 @@ u8 ReadMapper0(machine* M, u16 Address)
 void WriteMapper0(machine* M, u16 Address, u8 Data)
 {
 	if (Address >= 0x8000) {
-		u16 Mask = M->PRGROMSize - 1;
-		M->PRGROM[Address & Mask] = Data;
+		// PRGROM, read only.
+		return;
 	}
 	else if (Address >= 0x6000) {
 		M->PRGRAM[Address & 0x0FFF] = Data;
@@ -68,8 +68,8 @@ void WriteMapper0(machine* M, u16 Address, u8 Data)
 		WriteCIRAM(M, Address, Data);
 	}
 	else {
-		// Read only.
-		//M->CHRROM[Address & 0x1FFF] = Data;
+		// CHRROM, read only.
+		return;
 	}
 }
 
@@ -178,9 +178,8 @@ void WriteMapper1(machine* M, u16 Address, u8 Data)
 		WriteCIRAM(M, Address, Data);
 	}
 	else {
-		u32 Base = M1->CHRMap[(Address >> 12) & 1];
-		u32 Offset = Address & 0x0FFF;
-		M->CHRROM[Base + Offset] = Data;
+		// CHRROM, read only.
+		return;
 	}
 }
 
@@ -235,7 +234,8 @@ void WriteMapper2(machine* M, u16 Address, u8 Data)
 		WriteCIRAM(M, Address, Data);
 	}
 	else {
-		M->CHRROM[Address & 0x1FFF] = Data;
+		// CHRROM, read only.
+		return;
 	}
 }
 
@@ -281,7 +281,7 @@ void WriteMapper3(machine* M, u16 Address, u8 Data)
 		WriteCIRAM(M, Address, Data);
 	}
 	else {
-		// Read only.
+		// CHRROM, read only.
 		return;
 	}
 }
