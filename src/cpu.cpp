@@ -990,6 +990,7 @@ void StepCPU(machine* Machine)
 				case BVC: if ( VF) State = FETCH; break;
 				case BVS: if (!VF) State = FETCH; break;
 			}
+			if (State == FETCH) Trace(Machine);
 			break;
 
 		case 2 | RELATIVE_BRANCH:
