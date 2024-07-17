@@ -486,8 +486,10 @@ static void Operate(machine* Machine, u8 Operation)
 			NF = Y & 0x80;
 			break;
 
+		case LAX: // unofficial
 		case LDA:
 			A = M;
+			if (Operation == LAX) X = A;
 			ZF = A == 0;
 			NF = A & 0x80;
 			break;
@@ -583,6 +585,10 @@ static void Operate(machine* Machine, u8 Operation)
 
 		case SEI:
 			IF = true;
+			break;
+
+		case SAX: // unofficial
+			M = A & X;
 			break;
 
 		case STA:
