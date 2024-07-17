@@ -666,7 +666,7 @@ static inline void Trace(machine* Machine)
 				sprintf(C2, OperationName);
 			}
 			else {
-				sprintf(C1, "--", Opcode);
+				sprintf(C1, "--");
 				sprintf(C2, "*** %s ***", (CPU->Interrupt == NMI ? "NMI" : "IRQ"));
 			}
 			break;
