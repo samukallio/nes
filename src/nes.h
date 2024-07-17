@@ -403,6 +403,8 @@ struct machine
 	apu             APU;
 	mapper          Mapper;
 
+	u8              BusData;
+
 	u8*             RAM;                        // 2K system RAM.
 	u8*             CIRAM;                      // 2K PPU internal RAM.
 	u32             PRGROMSize;                 // PRG ROM size in bytes.

@@ -72,31 +72,29 @@ static inline u8 ReadController(machine* M, i32 Index)
 
 u8 Read(machine* M, u16 Address)
 {
-	u8 Data = 0;
-
-	if (Address >= 0x4020)
-		Data = ReadMapper(M, Address);
+	if (Address >= 0x4100)
+		M->BusData = ReadMapper(M, Address);
 	else if (Address == 0x4017)
-		Data = ReadController(M, 1);
+		M->BusData = (M->BusData & 0xE0) | ReadController(M, 1);
 	else if (Address == 0x4016)
-		Data = ReadController(M, 0);
+		M->BusData = (M->BusData & 0xE0) | ReadController(M, 0);
 	else if (Address == 0x4015)
-		Data = ReadAPU(M, Address);
-	else if (Address == 0x4014)
-		Data = ReadPPU(M, Address);
+		M->BusData = ReadAPU(M, Address);
 	else if (Address >= 0x4000)
-		Data = 0;
+		;
 	else if (Address >= 0x2000)
-		Data = ReadPPU(M, Address & 0x2007);
+		M->BusData = ReadPPU(M, Address & 0x2007);
 	else
-		Data = M->RAM[Address & 0x07FF];
+		M->BusData = M->RAM[Address & 0x07FF];
 
-	return Data;
+	return M->BusData;
 }
 
 void Write(machine* M, u16 Address, u8 Data)
 {
-	if (Address >= 0x4020)
+	M->BusData = Data;
+
+	if (Address >= 0x4100)
 		WriteMapper(M, Address, Data);
 	else if (Address == 0x4017)
 		WriteAPU(M, 0x4017, Data);
