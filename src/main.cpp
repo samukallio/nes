@@ -126,9 +126,19 @@ int main(int argc, char* args[])
 				nfdu8filteritem_t Filter = { "INES ROM", "nes" };
 				nfdu8char_t* Path = nullptr;
 				if (NFD_OpenDialogU8(&Path, &Filter, 1, nullptr) == NFD_OKAY) {
-					Load(M, Path);
-					NFD_FreePathU8(Path);
+					i64 Result = Load(M, Path);
+
+					if (Result >= 0) {
+						char Title[1024];
+						snprintf(Title, 1024, "NES Emulator - %s (Mapper %d)\n", Path, M->Mapper.ID);
+						SDL_SetWindowTitle(Window, Title);
+					}
+					else {
+						SDL_SetWindowTitle(Window, "NES Emulator");
+					}
+
 					CurrentFrame = 0;
+					NFD_FreePathU8(Path);
 				}
 			}
 			// T: Open/close debug trace file.
