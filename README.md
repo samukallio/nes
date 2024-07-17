@@ -7,6 +7,18 @@ A simple NES emulator written in C++ (or rather, C with some C++ features sprink
 * Cycle-accurate CPU emulation, including dummy reads and double writes
 * Supported INES mappers: 000 (NROM), 001 (MMC1), 002 (UxROM), 003 (CNROM), 004 (MMC3)
 
+## Building
+
+CMake is required to generate the build files for the project. To generate the build files, type the following:
+
+```
+mkdir build
+cd build
+cmake ..
+```
+
+After the build files have been generated, build the project using the platform compiler toolkit (e.g. Visual Studio on Windows).
+
 ## Screenshots
 
 <p align="center">
