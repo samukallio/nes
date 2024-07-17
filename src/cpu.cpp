@@ -385,10 +385,17 @@ static void Operate(machine* Machine, u8 Operation)
 			break;
 
 		case SLO: // unofficial
+			R = M << 1;
+			M = R;
+			A |= M;
+			ZF = A == 0;
+			NF = A & 0x80;
+			CF = R > 0xFF;
+			break;
+
 		case ASL:
 			R = M << 1;
 			M = R;
-			if (Operation == SLO) A |= M;
 			ZF = M == 0;
 			NF = M & 0x80;
 			CF = R > 0xFF;
