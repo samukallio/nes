@@ -34,7 +34,7 @@ After the build files have been generated, build the project using the platform 
 | :heavy_check_mark: | `branch_timing_tests` | blargg  | Timing of the branch instruction, including edge cases     |
 | :heavy_check_mark: | `cpu_dummy_reads`     | blargg  | Test addressing modes that have dummy reads                |
 | :heavy_check_mark: | `cpu_dummy_writes`    | bisqwit | Verify double writes by read-modify-write instructions     |
-| :x:                | `cpu_exec_space`      | bisqwit | Verify that CPU can execute code from any memory location  |
+| :heavy_check_mark: | `cpu_exec_space`      | bisqwit | Verify that CPU can execute code from any memory location  |
 | :x:                | `cpu_interrupts_v2`   | blargg  | Behavior and timing of CPU interrupts (NMI and IRQ)        |
 | :heavy_check_mark: | `cpu_timing_test6`    | blargg  | Instruction timing (official and unofficial)               |
 | :heavy_check_mark: | `instr_misc`          | blargg  | Miscellaneous instruction test                             |
