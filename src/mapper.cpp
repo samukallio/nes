@@ -45,7 +45,7 @@ u8 ReadMapper0(machine* M, u16 Address)
 		return ReadCIRAM(M, Address);
 	}
 	else {
-		return M->CHRROM[Address & 0x1FFF];
+		return M->CHR[Address & 0x1FFF];
 	}
 }
 
@@ -68,7 +68,7 @@ void WriteMapper0(machine* M, u16 Address, u8 Data)
 		WriteCIRAM(M, Address, Data);
 	}
 	else {
-		M->CHRROM[Address & 0x1FFF] = Data;
+		M->CHR[Address & 0x1FFF] = Data;
 	}
 }
 
@@ -142,7 +142,7 @@ u8 ReadMapper1(machine* M, u16 Address)
 	else {
 		u32 Base = M1->CHRMap[(Address >> 12) & 1];
 		u32 Offset = Address & 0x0FFF;
-		return M->CHRROM[Base + Offset];
+		return M->CHR[Base + Offset];
 	}
 }
 
@@ -181,7 +181,7 @@ void WriteMapper1(machine* M, u16 Address, u8 Data)
 	else {
 		u32 Base = M1->CHRMap[(Address >> 12) & 1];
 		u32 Offset = Address & 0x0FFF;
-		M->CHRROM[Base + Offset] = Data;
+		M->CHR[Base + Offset] = Data;
 	}
 }
 
@@ -212,7 +212,7 @@ u8 ReadMapper2(machine* M, u16 Address)
 		return ReadCIRAM(M, Address);
 	}
 	else {
-		return M->CHRROM[Address & 0x1FFF];
+		return M->CHR[Address & 0x1FFF];
 	}
 }
 
@@ -236,7 +236,7 @@ void WriteMapper2(machine* M, u16 Address, u8 Data)
 		WriteCIRAM(M, Address, Data);
 	}
 	else {
-		M->CHRROM[Address & 0x1FFF] = Data;
+		M->CHR[Address & 0x1FFF] = Data;
 	}
 }
 
@@ -261,7 +261,7 @@ u8 ReadMapper3(machine* M, u16 Address)
 	}
 	else {
 		u32 Base = M3->CHRBank * 8192;
-		return M->CHRROM[Base + Address];
+		return M->CHR[Base + Address];
 	}
 }
 
@@ -386,7 +386,7 @@ u8 ReadMapper4(machine* M, u16 Address)
 	else {
 		u32 Base = M4->CHRMap[(Address >> 10) & 7];
 		u32 Offset = Address & 0x03FF;
-		return M->CHRROM[Base + Offset];
+		return M->CHR[Base + Offset];
 	}
 }
 

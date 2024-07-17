@@ -159,7 +159,7 @@ void Unload(machine* M)
 	free(M->CIRAM); M->CIRAM = nullptr;
 	free(M->PRGRAM); M->PRGRAM = nullptr;
 	free(M->PRGROM); M->PRGROM = nullptr;
-	free(M->CHRROM); M->CHRROM = nullptr;
+	free(M->CHR); M->CHR = nullptr;
 	free(M->APU.AudioBuffer); M->APU.AudioBuffer = nullptr;
 	free(M->PPU.FrameBuffer[0]); M->PPU.FrameBuffer[0] = nullptr;
 	free(M->PPU.FrameBuffer[1]); M->PPU.FrameBuffer[1] = nullptr;
@@ -238,16 +238,16 @@ i32 Load(machine* M, const char* Path)
 	
 	// Load CHR ROM data.
 	if (Header.NumCHR > 0) {
-		M->CHRROMSize = Header.NumCHR * 8192;
-		M->CHRROM = (u8*)calloc(M->CHRROMSize, 1);
-		if (fread(M->CHRROM, 1, M->CHRROMSize, File) < M->CHRROMSize) {
+		M->CHRSize = Header.NumCHR * 8192;
+		M->CHR = (u8*)calloc(M->CHRSize, 1);
+		if (fread(M->CHR, 1, M->CHRSize, File) < M->CHRSize) {
 			fclose(File);
 			return -1;
 		}
 	}
 	else {
-		M->CHRROMSize = 8192;
-		M->CHRROM = (u8*)calloc(8192, 1);
+		M->CHRSize = 8192;
+		M->CHR = (u8*)calloc(8192, 1);
 	}
 
 	// Allocate frame buffers.

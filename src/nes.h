@@ -408,8 +408,8 @@ struct machine
 	u8*             PRGRAM;                     // PRG ROM.
 	u32             PRGRAMSize;                 // PRG RAM size in bytes.
 	u8*             PRGROM;                     // PRG RAM.
-	u32             CHRROMSize;                 // CHR ROM size in bytes.
-	u8*             CHRROM;                     // CHR ROM.
+	u32             CHRSize;                    // CHR RAM/ROM size in bytes.
+	u8*             CHR;                        // CHR RAM/ROM.
 };
 
 /* --- cpu.cpp -------------------------------------------------------------- */
