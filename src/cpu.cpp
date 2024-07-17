@@ -318,11 +318,11 @@ const cpu_instruction InstructionTable[256] =
 	{ 0xE0, CPX, IMMEDIATE                         },
 	{ 0xE1, SBC, INDEXED_INDIRECT_READ             },
 	{ 0xE2, NOP, IMMEDIATE                         },
-	{ 0xE3, ISC, INDEXED_INDIRECT_READ             },
+	{ 0xE3, ISC, INDEXED_INDIRECT_MODIFY           },
 	{ 0xE4, CPX, ZERO_PAGE_READ                    },
 	{ 0xE5, SBC, ZERO_PAGE_READ                    },
 	{ 0xE6, INC, ZERO_PAGE_MODIFY                  },
-	{ 0xE7, ISC, ZERO_PAGE_READ                    },
+	{ 0xE7, ISC, ZERO_PAGE_MODIFY                  },
 	{ 0xE8, INX, IMPLIED                           },
 	{ 0xE9, SBC, IMMEDIATE                         },
 	{ 0xEA, NOP, IMPLIED                           },
@@ -330,23 +330,23 @@ const cpu_instruction InstructionTable[256] =
 	{ 0xEC, CPX, ABSOLUTE_READ                     },
 	{ 0xED, SBC, ABSOLUTE_READ                     },
 	{ 0xEE, INC, ABSOLUTE_MODIFY                   },
-	{ 0xEF, ISC, ABSOLUTE_READ                     },
+	{ 0xEF, ISC, ABSOLUTE_MODIFY                   },
 	{ 0xF0, BEQ, RELATIVE_BRANCH                   },
 	{ 0xF1, SBC, INDIRECT_INDEXED_READ             },
 	{ 0xF2, KIL, IMPLIED                           },
-	{ 0xF3, ISC, INDIRECT_INDEXED_READ             },
+	{ 0xF3, ISC, INDIRECT_INDEXED_MODIFY           },
 	{ 0xF4, NOP, ZERO_PAGE_INDEXED_READ  , INDEX_X },
 	{ 0xF5, SBC, ZERO_PAGE_INDEXED_READ  , INDEX_X },
 	{ 0xF6, INC, ZERO_PAGE_INDEXED_MODIFY, INDEX_X },
-	{ 0xF7, ISC, ZERO_PAGE_INDEXED_READ  , INDEX_X },
+	{ 0xF7, ISC, ZERO_PAGE_INDEXED_MODIFY, INDEX_X },
 	{ 0xF8, SED, IMPLIED                           },
 	{ 0xF9, SBC, ABSOLUTE_INDEXED_READ   , INDEX_Y },
 	{ 0xFA, NOP, IMPLIED                           },
-	{ 0xFB, ISC, ABSOLUTE_INDEXED_READ   , INDEX_Y },
+	{ 0xFB, ISC, ABSOLUTE_INDEXED_MODIFY , INDEX_Y },
 	{ 0xFC, NOP, ABSOLUTE_INDEXED_READ   , INDEX_X },
 	{ 0xFD, SBC, ABSOLUTE_INDEXED_READ   , INDEX_X },
 	{ 0xFE, INC, ABSOLUTE_INDEXED_MODIFY , INDEX_X },
-	{ 0xFF, ISC, ABSOLUTE_INDEXED_READ   , INDEX_X },
+	{ 0xFF, ISC, ABSOLUTE_INDEXED_MODIFY , INDEX_X },
 };
 
 static void Operate(machine* Machine, u8 Operation)
@@ -354,19 +354,26 @@ static void Operate(machine* Machine, u8 Operation)
 	cpu* CPU = &Machine->CPU;
 	USING_CPU_REGISTERS
 
-	// Temporary register.
+	// Temporary registers.
 	u32 R;
 
 	switch (Operation) {
-		case SBC:
-			M = ~M;
+		case ISC: // unofficial
+			M++;
 			[[fallthrough]];
+		case SBC:
 		case ADC:
-			R = A + M + CF;
+			if (Operation == SBC) {
+				R = A + ~M + CF;
+				VF = ~(A ^ ~M) & (A ^ R) & 0x80;
+			}
+			else {
+				R = A + M + CF;
+				VF = ~(A ^ M) & (A ^ R) & 0x80;
+			}
 			ZF = !(R & 0xFF);
 			NF = R & 0x80;
 			CF = R > 0xFF;
-			VF = ~(A ^ M) & (A ^ R) & 0x80;
 			A = R;
 			break;
 
@@ -376,9 +383,11 @@ static void Operate(machine* Machine, u8 Operation)
 			NF = A & 0x80;
 			break;
 
+		case SLO: // unofficial
 		case ASL:
 			R = M << 1;
 			M = R;
+			if (Operation == SLO) A |= M;
 			ZF = M == 0;
 			NF = M & 0x80;
 			CF = R > 0xFF;
@@ -425,6 +434,14 @@ static void Operate(machine* Machine, u8 Operation)
 			ZF = !(R & 0xFF);
 			NF = R & 0x80;
 			CF = Y >= M;
+			break;
+
+		case DCP: // unofficial
+			M--;
+			R = A - M;
+			ZF = !(R & 0xFF);
+			NF = R & 0x80;
+			CF = A >= M;
 			break;
 
 		case DEC:
@@ -487,9 +504,11 @@ static void Operate(machine* Machine, u8 Operation)
 			NF = Y & 0x80;
 			break;
 
+		case SRE: // unofficial
 		case LSR:
 			CF = M & 0x01;
 			M >>= 1;
+			if (Operation == SRE) A ^= M;
 			ZF = M == 0;
 			NF = false;
 			break;
@@ -534,18 +553,22 @@ static void Operate(machine* Machine, u8 Operation)
 			CF = M & 0x01;
 			break;
 
+		case RLA: // unofficial
 		case ROL:
 			R = (M << 1) | u8(CF);
 			M = R;
+			if (Operation == RLA) A &= M;
 			CF = R > 0xFF;
 			ZF = M == 0;
 			NF = M & 0x80;
 			break;
 
+		case RRA: // unofficial
 		case ROR:
 			R = (M >> 1) | CF << 7;
 			CF = M & 1;
 			M = R;
+			if (Operation == RRA) A = (A + M + CF) & 0xFF;
 			ZF = M == 0;
 			NF = M & 0x80;
 			break;
