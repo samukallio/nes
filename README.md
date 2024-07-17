@@ -1,8 +1,19 @@
-# Overview
+## Overview
 
 A simple NES emulator written in C++ (or rather, C with some C++ features sprinkled on).
 
-# Tests
+## Features
+
+* Cycle-accurate CPU emulation, including dummy reads and double writes
+* Supported INES mappers: 000 (NROM), 001 (MMC1), 002 (UxROM), 003 (CNROM), 004 (MMC3)
+
+## Screenshots
+
+<p align="center">
+    <img src="https://samukallio.net/nes/montage.png">
+</p>
+
+## Tests
 
 ### CPU Tests
 
