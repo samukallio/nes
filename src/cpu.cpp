@@ -515,10 +515,16 @@ static void Operate(machine* Machine, u8 Operation)
 			break;
 
 		case SRE: // unofficial
+			CF = M & 0x01;
+			M >>= 1;
+			A ^= M;
+			ZF = A == 0;
+			NF = A & 0x80;
+			break;
+
 		case LSR:
 			CF = M & 0x01;
 			M >>= 1;
-			if (Operation == SRE) A ^= M;
 			ZF = M == 0;
 			NF = false;
 			break;
@@ -564,21 +570,40 @@ static void Operate(machine* Machine, u8 Operation)
 			break;
 
 		case RLA: // unofficial
+			R = (M << 1) | u8(CF);
+			M = R;
+			CF = R > 0xFF;
+			A &= M;
+			ZF = A == 0;
+			NF = A & 0x80;
+			break;
+
 		case ROL:
 			R = (M << 1) | u8(CF);
 			M = R;
-			if (Operation == RLA) A &= M;
 			CF = R > 0xFF;
 			ZF = M == 0;
 			NF = M & 0x80;
 			break;
 
 		case RRA: // unofficial
+			// rotate operand
+			R = (M >> 1) | CF << 7;
+			CF = M & 1;
+			M = R;
+			// add with carry
+			R = A + M + CF;
+			VF = ~(A ^ M) & (A ^ R) & 0x80;
+			ZF = !(R & 0xFF);
+			NF = R & 0x80;
+			CF = R > 0xFF;
+			A = R;
+			break;
+
 		case ROR:
 			R = (M >> 1) | CF << 7;
 			CF = M & 1;
 			M = R;
-			if (Operation == RRA) A = (A + M + CF) & 0xFF;
 			ZF = M == 0;
 			NF = M & 0x80;
 			break;
