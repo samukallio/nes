@@ -364,8 +364,8 @@ static void Operate(machine* Machine, u8 Operation)
 		case SBC:
 		case ADC:
 			if (Operation == SBC) {
-				R = A + ~M + CF;
-				VF = ~(A ^ ~M) & (A ^ R) & 0x80;
+				R = A + (M ^ 0xFF) + CF;
+				VF = ~(A ^ (M ^ 0xFF)) & (A ^ R) & 0x80;
 			}
 			else {
 				R = A + M + CF;
