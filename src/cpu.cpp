@@ -660,6 +660,16 @@ static inline void Trace(machine* Machine)
 			sprintf(C1, "%02X", Opcode);
 			sprintf(C2, OperationName);
 			break;
+		case INTERRUPT_JUMP:
+			if (CPU->Interrupt == NO_INTERRUPT) {
+				sprintf(C1, "%02X", Opcode);
+				sprintf(C2, OperationName);
+			}
+			else {
+				sprintf(C1, "--", Opcode);
+				sprintf(C2, "*** %s ***", (CPU->Interrupt == NMI ? "NMI" : "IRQ"));
+			}
+			break;
 		case RELATIVE_BRANCH:
 			sprintf(C1, "%02X %02X", Opcode, CPU->R1);
 			sprintf(C2, "%s $%02X", OperationName, CPU->R2);
@@ -817,6 +827,7 @@ void StepCPU(machine* Machine)
 					IF = true;
 					break;
 			}
+			Trace(Machine);
 			Write(Machine, 0x100 | SP--, M);
 			CPU->Interrupt = NO_INTERRUPT;
 			break;
@@ -833,6 +844,7 @@ void StepCPU(machine* Machine)
 			// An interrupt sequence does not poll the NMI or IRQ detectors
 			// at the end, so instead of going to FETCH, handle next opcode
 			// fetch here.
+			CPU->R0 = PC;
 			CPU->Instruction = InstructionTable[Read(Machine, PC++)];
 			State = CPU->Instruction.State;
 			break;
@@ -939,6 +951,7 @@ void StepCPU(machine* Machine)
 			STALL;
 			M = Read(Machine, 0x100 | SP);
 			Operate(Machine, Operation);
+			Trace(Machine);
 			State = FETCH;
 			break;
 
@@ -980,6 +993,10 @@ void StepCPU(machine* Machine)
 		case 1 | RELATIVE_BRANCH:
 			STALL;
 			R1 = Read(Machine, PC++);
+			// Compute new program counter.
+			R2 = PC + R1;
+			if (R1 & 0x80) R2 -= 0x100;
+			// If branch not taken, go fetch next instruction.
 			switch (Operation) {
 				case BCC: if ( CF) State = FETCH; break;
 				case BCS: if (!CF) State = FETCH; break;
@@ -997,9 +1014,6 @@ void StepCPU(machine* Machine)
 			STALL;
 			// Dummy read next opcode.
 			Read(Machine, PC);
-			// Compute new program counter.
-			R2 = PC + R1;
-			if (R1 & 0x80) R2 -= 0x100;
 			// Check for page-crossing branch.
 			if ((R2 & 0xFF00) == (PC & 0xFF00)) {
 				// Branch target is on the same page, so we're done.
