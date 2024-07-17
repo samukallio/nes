@@ -378,8 +378,33 @@ static void Operate(machine* Machine, u8 Operation)
 			A = R;
 			break;
 
+		case ANC: // unofficial
+			A &= M;
+			ZF = A == 0;
+			NF = A & 0x80;
+			CF = NF;
+			break;
+
 		case AND:
 			A &= M;
+			ZF = A == 0;
+			NF = A & 0x80;
+			break;
+
+		case ALR: // unofficial
+			A &= M;
+			CF = A & 0x01;
+			A >>= 1;
+			ZF = A == 0;
+			NF = false;
+			break;
+
+		case ARR: // unofficial
+			A &= M;
+			R = (A >> 1) | CF << 7;
+			A = R;
+			CF = A & 0x40;
+			VF = ((A >> 1) ^ A) & 0x20;
 			ZF = A == 0;
 			NF = A & 0x80;
 			break;
@@ -398,6 +423,14 @@ static void Operate(machine* Machine, u8 Operation)
 			M = R;
 			ZF = M == 0;
 			NF = M & 0x80;
+			CF = R > 0xFF;
+			break;
+
+		case AXS: // unofficial
+			R = (A & X) + (M ^ 0xFF) + 1;
+			X = R;
+			ZF = X == 0;
+			NF = X & 0x80;
 			CF = R > 0xFF;
 			break;
 
