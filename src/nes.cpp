@@ -55,7 +55,6 @@ void Reset(machine* M)
 	M->PPU.ScanY = 261;
 	M->PPU.ScanX = 0;
 
-
 	M->APU.AudioPointer = 0;
 
 	M->APU.Noise.NoiseRegister = 0x0001;
@@ -161,7 +160,6 @@ void Unload(machine* M)
 	free(M->APU.AudioBuffer); M->APU.AudioBuffer = nullptr;
 	free(M->PPU.FrameBuffer[0]); M->PPU.FrameBuffer[0] = nullptr;
 	free(M->PPU.FrameBuffer[1]); M->PPU.FrameBuffer[1] = nullptr;
-	memset(M, 0, sizeof(machine));
 	M->IsLoaded = false;
 }
 
@@ -180,6 +178,7 @@ i32 Load(machine* M, const char* Path)
 
 	// Clear current data.
 	Unload(M);
+	memset(M, 0, sizeof(machine));
 
 	FILE* File = fopen(Path, "rb");
 	if (!File) return -1;
