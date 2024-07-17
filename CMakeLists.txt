@@ -4,8 +4,8 @@ project(nes)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
-add_subdirectory(vendor/sdl2 EXCLUDE_FROM_ALL)
-add_subdirectory(vendor/nativefiledialog-extended)
+add_subdirectory(lib/sdl2 EXCLUDE_FROM_ALL)
+add_subdirectory(lib/nativefiledialog-extended)
 
 add_executable(nes
 	src/main.cpp
