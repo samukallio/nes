@@ -392,6 +392,7 @@ struct machine
 	bool            Battery;
 	bool            TraceEnable;
 	FILE*           TraceFile;
+	u64             TraceLine;
 
 	u8              Input[2];                   // Controller button states.
 	bool            InputStrobe;                // Controller register strobe.

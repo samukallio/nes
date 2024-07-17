@@ -728,6 +728,8 @@ static inline void Trace(machine* Machine)
 	fprintf(F,
 		"%04X  %-8s  %-30s A:%02X X:%02X Y:%02X SP:%02X\n",
 		CPU->R0, C1, C2, CPU->A, CPU->X, CPU->Y, CPU->SP);
+
+	Machine->TraceLine++;
 }
 
 #define STALL if (Stalled) break;

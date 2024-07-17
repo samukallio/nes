@@ -147,10 +147,12 @@ int main(int argc, char* args[])
 					printf("Closing trace file\n");
 					fclose(M->TraceFile);
 					M->TraceFile = nullptr;
+					M->TraceLine = 0;
 				}
 				else {
 					printf("Opening trace file\n");
 					M->TraceFile = fopen("trace.txt", "wb");
+					M->TraceLine = 0;
 				}
 			}
 			// P: Pause emulator.
