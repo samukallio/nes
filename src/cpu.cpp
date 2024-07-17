@@ -363,13 +363,14 @@ static void Operate(machine* Machine, u8 Operation)
 			[[fallthrough]];
 		case SBC:
 		case ADC:
-			if (Operation == SBC) {
-				R = A + (M ^ 0xFF) + CF;
-				VF = ~(A ^ (M ^ 0xFF)) & (A ^ R) & 0x80;
-			}
-			else {
+			if (Operation == ADC) {
 				R = A + M + CF;
 				VF = ~(A ^ M) & (A ^ R) & 0x80;
+			}
+			else {
+				// SBC and ISC.
+				R = A + (M ^ 0xFF) + CF;
+				VF = ~(A ^ (M ^ 0xFF)) & (A ^ R) & 0x80;
 			}
 			ZF = !(R & 0xFF);
 			NF = R & 0x80;
