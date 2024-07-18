@@ -47,7 +47,7 @@ After the build files have been generated, build the project using the platform 
 | :----------------: | ----------------------------- | -------- | ---------------------------------------------------------- |
 | :heavy_check_mark: | `oam_read`                    | blargg   | Reading from OAMDATA returns data at OAMADDR               |
 | :heavy_check_mark: | `oam_stress`                  | blargg   | Thoroughly test OAMDATA and OAMADDR                        |
-| :x:                | `ppu_open_bus`                | blargg   | Test PPU open bus behavior                                 |
+| :heavy_check_mark: | `ppu_open_bus`                | blargg   | Test PPU open bus behavior                                 |
 | :heavy_check_mark: | `ppu_read_buffer`             | bisqwit  | PPU test suite mostly concentrating on the PPU read buffer |
 | :x:                | `ppu_vbl_nmi`                 | blargg   | Test PPU VBL flag behavior and timing                      |
 | :x:                | `scanline`                    | Quietust | Test PPU scanline timing accuracy                          |
