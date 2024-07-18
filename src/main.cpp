@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <math.h>
+
+#define SDL_MAIN_HANDLED
 #include <SDL.h>
 
 #include <nfd.h>
