@@ -832,6 +832,7 @@ void StepCPU(machine* M)
 		case RESET +5:
 			STALL;
 			PC = Read(M, 0xFFFC);
+			BF = true;
 			IF = true;
 			State++;
 			break;
