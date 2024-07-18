@@ -70,6 +70,10 @@ struct cpu
 
 /* --- PPU: Picture Processing Unit ---------------------------------------- */
 
+// Number of master cycles an undriven PPU bus
+// data line will take to decay back to zero.
+const u64 PPUBusDataDecayCycleCount = 1000000;
+
 const u32 PPUColorTable[64] =
 {
 	0xFF666666, 0xFF002A88, 0xFF1412A7, 0xFF3B00A4,
@@ -116,6 +120,7 @@ struct ppu
 	u8              OAMAddress;                 // OAMADDR.
 	u8              ReadBuffer;                 // PPUDATA read buffer.
 	u8              BusData;                    // Open bus data.
+	u64             BusDataRefreshCycle[8];     // For each bus data line bit, the master cycle it was last driven.
 
 	bool            BackgroundEnable;           // Enable background rendering.
 	bool            BackgroundShowLeftMargin;   // Show background at X < 8.

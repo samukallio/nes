@@ -18,33 +18,38 @@ u8 ReadPPU(machine* M, u16 Address)
 {
 	ppu* PPU = &M->PPU;
 
+	u8 BusData = 0;
+	u8 BusMask = 0;
+
 	switch (Address) {
 		case 0x2002: { // PPUSTATUS
-			u8 Data = (PPU->SpriteOverflow    ? 0x20 : 0x00)
+			BusData = (PPU->SpriteOverflow    ? 0x20 : 0x00)
 			        | (PPU->SpriteZeroHit     ? 0x40 : 0x00)
 			        | (PPU->VerticalBlankFlag ? 0x80 : 0x00)
 			        ;
+			BusMask = 0xE0;
 
-			PPU->BusData = (PPU->BusData & 0x1F) | Data;
 			PPU->W = 0;
 			PPU->VerticalBlankFlag = false;
 			PPU->VerticalBlankFlagInhibit = true;
 			break;
 		}
 		case 0x2004: { // OAMDATA
-			PPU->BusData = PPU->SpriteOAM[PPU->OAMAddress];
+			BusData = PPU->SpriteOAM[PPU->OAMAddress];
+			BusMask = 0xFF;
 			break;
 		}
 		case 0x2007: { // PPUDATA
 			u16 Address = PPU->V & 0x3FFF;
 
 			if (Address < 0x3F00) {
-				u8 BufferedData = PPU->ReadBuffer;
+				BusData = PPU->ReadBuffer;
+				BusMask = 0xFF;
 				PPU->ReadBuffer = ReadMapper(M, Address);
-				PPU->BusData = BufferedData;
 			}
 			else {
-				PPU->BusData = PPU->Palette[PaletteOffset(Address)];
+				BusData = PPU->Palette[PaletteOffset(Address)];
+				BusMask = 0x3F;
 				PPU->ReadBuffer = ReadMapper(M, (PPU->V - 0x1000) & 0x3FFF);
 			}
 
@@ -53,6 +58,19 @@ u8 ReadPPU(machine* M, u16 Address)
 			break;
 		}
 	}
+
+	// Drive the data that was just read onto the bus.
+	PPU->BusData = (PPU->BusData & ~BusMask) | BusData;
+
+	// Mark every bus data line that was driven as refreshed during this master cycle.
+	for (int I = 0; I < 8; I++)
+		if (BusMask & (1 << I))
+			PPU->BusDataRefreshCycle[I] = PPU->MasterCycle;
+
+	// For those data lines that haven't been driven in a while, decay the line value to zero.
+	for (int I = 0; I < 8; I++)
+		if (PPU->MasterCycle > PPU->BusDataRefreshCycle[I] + PPUBusDataDecayCycleCount)
+			PPU->BusData &= ~(1 << I);
 
 	return PPU->BusData;
 }
@@ -64,7 +82,12 @@ void WritePPU(machine* M, u16 Address, u8 Data)
 	// Remember the written data to emulate open-bus behavior.
 	// Does not apply to OAMDMA, since that is actually located
 	// on the CPU.
-	if (Address & 0x2000) PPU->BusData = Data;
+	if (Address & 0x2000) {
+		PPU->BusData = Data;
+		// A CPU write to the PPU bus refreshes all data lines.
+		for (int I = 0; I < 8; I++)
+			PPU->BusDataRefreshCycle[I] = PPU->MasterCycle;
+	}
 
 	switch (Address) {
 		case 0x2000: { // PPUCTRL
