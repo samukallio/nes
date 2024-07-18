@@ -22,29 +22,30 @@ enum cpu_state
 {
 	RESET             = 0x00 << 3,
 	FETCH             = 0x01 << 3,
-	INTERRUPT_JUMP    = 0x02 << 3,
-	INTERRUPT_RETURN  = 0x03 << 3,
-	SUBROUTINE_JUMP   = 0x04 << 3,
-	SUBROUTINE_RETURN = 0x05 << 3,
-	STACK_PUSH        = 0x06 << 3,
-	STACK_PULL        = 0x07 << 3,
-	IMPLIED           = 0x08 << 3,
-	ACCUMULATOR       = 0x09 << 3,
-	IMMEDIATE         = 0x0A << 3,
-	BRANCH            = 0x0B << 3,
-	ABSOLUTE_JUMP     = 0x0C << 3,
-	INDIRECT_JUMP     = 0x0D << 3,
-	ZERO_PAGE         = 0x0E << 3,
-	ZERO_PAGE_X       = 0x0F << 3,
-	ZERO_PAGE_Y       = 0x10 << 3,
-	ABSOLUTE          = 0x11 << 3,
-	ABSOLUTE_X        = 0x12 << 3,
-	ABSOLUTE_Y        = 0x13 << 3,
-	INDEXED_INDIRECT  = 0x14 << 3,
-	INDIRECT_INDEXED  = 0x15 << 3,
-	READ              = 0x16 << 3,
-	MODIFY            = 0x17 << 3,
-	WRITE             = 0x18 << 3,
+	FETCH_NO_POLL     = 0x02 << 3,
+	INTERRUPT_JUMP    = 0x03 << 3,
+	INTERRUPT_RETURN  = 0x04 << 3,
+	SUBROUTINE_JUMP   = 0x05 << 3,
+	SUBROUTINE_RETURN = 0x06 << 3,
+	STACK_PUSH        = 0x07 << 3,
+	STACK_PULL        = 0x08 << 3,
+	IMPLIED           = 0x09 << 3,
+	ACCUMULATOR       = 0x0A << 3,
+	IMMEDIATE         = 0x0B << 3,
+	BRANCH            = 0x0C << 3,
+	ABSOLUTE_JUMP     = 0x0D << 3,
+	INDIRECT_JUMP     = 0x0E << 3,
+	ZERO_PAGE         = 0x0F << 3,
+	ZERO_PAGE_X       = 0x10 << 3,
+	ZERO_PAGE_Y       = 0x11 << 3,
+	ABSOLUTE          = 0x12 << 3,
+	ABSOLUTE_X        = 0x13 << 3,
+	ABSOLUTE_Y        = 0x14 << 3,
+	INDEXED_INDIRECT  = 0x15 << 3,
+	INDIRECT_INDEXED  = 0x16 << 3,
+	READ              = 0x17 << 3,
+	MODIFY            = 0x18 << 3,
+	WRITE             = 0x19 << 3,
 };
 
 enum cpu_operation : u8
@@ -845,6 +846,7 @@ void StepCPU(machine* M)
 		// --- Fetch ----------------------------------------------------------
 
 		case FETCH:
+		case FETCH_NO_POLL:
 			STALL;
 			if (CPU->Interrupt) {
 				Read(M, PC);
@@ -913,16 +915,8 @@ void StepCPU(machine* M)
 		case INTERRUPT_JUMP +5:
 			STALL;
 			PC |= Read(M, Address+1) << 8;
-			State++;
-			break;
-		case INTERRUPT_JUMP +6:
-			STALL;
-			// An interrupt sequence does not poll the NMI or IRQ detectors
-			// at the end, so instead of going to FETCH, handle next opcode
-			// fetch here.
-			InstructionPC = PC;
-			Instruction = InstructionTable[Read(M, PC++)];
-			State = Instruction.InitialState;
+			// An interrupt sequence does not poll the NMI or IRQ detectors at the end.
+			State = FETCH_NO_POLL;
 			break;
 
 		// --- Return from Interrupt ------------------------------------------
@@ -1111,7 +1105,7 @@ void StepCPU(machine* M)
 				// Branch target is on the same page, so we're done.
 				PC = Address;
 				Trace(M);
-				State = FETCH;
+				State = FETCH_NO_POLL;
 			}
 			break;
 		case BRANCH +2:
@@ -1351,9 +1345,12 @@ void StepCPU(machine* M)
 			break;
 	}
 
-	// Poll for interrupts at the end of an instruction, or before branch
-	// cycles 0 (opcode fetch) or 2 (taken branch, PCH fixup).
-	if (State == FETCH || State == BRANCH+0 || State == BRANCH+2) {
+	// Poll for interrupts at the end of an instruction, or before branch cycles 0
+	// (operand fetch), 1 (taken branch) and 2 (taken branch with page crossing).
+	// The nesdev.org documentation states that interrupts are not polled before
+	// BRANCH+1, but this seems to be necessary to pass the cpu_interrupts_v2 test
+	// (and I haven't had any tests fail because of it).
+	if (State == FETCH || State == BRANCH+0 || State == BRANCH+1 || State == BRANCH+2) {
 		if (CPU->InternalNMI) {
 			// Trigger NMI.
 			CPU->Interrupt = NMI;
