@@ -845,13 +845,13 @@ void StepCPU(machine* M)
 
 		case FETCH:
 			STALL;
-			InstructionPC = PC;
 			if (CPU->Interrupt) {
 				Read(M, PC);
 				// Start interrupt sequence for IRQ.
 				State = INTERRUPT_JUMP;
 			}
 			else {
+				InstructionPC = PC;
 				Instruction = InstructionTable[Read(M, PC++)];
 				State = Instruction.InitialState;
 				//printf("I %s\n", OperationNameTable[Instruction.Operation]);
@@ -878,21 +878,22 @@ void StepCPU(machine* M)
 		case INTERRUPT_JUMP +3:
 			switch (CPU->Interrupt) {
 				case NMI:
-					Immediate = 0xFFFA;
+					Address = 0xFFFA;
 					BF = Instruction.Operation == BRK;
 					Operate(M, PHP);
 					BF = true;
+					IF = true;
 					CPU->InternalNMI = false;
 					break;
 				case IRQ:
-					Immediate = 0xFFFE;
+					Address = 0xFFFE;
 					BF = Instruction.Operation == BRK;
 					Operate(M, PHP);
 					IF = true;
 					BF = true;
 					break;
 				case NO_INTERRUPT: // BRK
-					Immediate = 0xFFFE;
+					Address = 0xFFFE;
 					BF = true;
 					Operate(M, PHP);
 					IF = true;
@@ -905,12 +906,12 @@ void StepCPU(machine* M)
 			break;
 		case INTERRUPT_JUMP +4:
 			STALL;
-			PC = Read(M, Immediate);
+			PC = Read(M, Address);
 			State++;
 			break;
 		case INTERRUPT_JUMP +5:
 			STALL;
-			PC |= Read(M, Immediate+1) << 8;
+			PC |= Read(M, Address+1) << 8;
 			State++;
 			break;
 		case INTERRUPT_JUMP +6:
@@ -1105,7 +1106,7 @@ void StepCPU(machine* M)
 			Read(M, PC);
 			State++;
 			// Check for page-crossing branch.
-			if ((Address & 0xFF00) == (PC & 0xFF00)) {
+			if (IsSamePage(Address, PC)) {
 				// Branch target is on the same page, so we're done.
 				PC = Address;
 				Trace(M);
