@@ -22,8 +22,8 @@ struct cpu_instruction
 {
 	u8              Opcode;
 	u8              Operation;
-	u8              State;
-	bool            XY;
+	u8              InitialState;
+	u8              MemoryOperationState;
 };
 
 enum cpu_interrupt
@@ -43,13 +43,13 @@ struct cpu
 	bool            InternalNMI;   // NMI edge detector output.
 	cpu_interrupt   Interrupt;     // Hardware interrupt to serve.
 
-	cpu_instruction Instruction;   // Decoded instruction.
 	u8              State;         // Operation state.
-	u16             R0;            // Operation register 0.
-	u16             R1;            // Operation register 1.
-	u16             R2;            // Operation register 2.
-	u16             R3;            // Operation register 3.
-	u8              M;             // Operand register.
+	cpu_instruction Instruction;   // Decoded instruction.
+	u16             InstructionPC; // Memory location of currently executing instruction.
+	u16             Immediate;     // Immediate operand value.
+	u16             Indirect;      // Address for indirect operations.
+	u16             Address;       // Operand address.
+	u8              Operand;       // Operand register.
 
 	u16             PC;            // Program counter.
 	u8              SP;            // Stack pointer.
