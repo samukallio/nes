@@ -880,21 +880,20 @@ void StepCPU(machine* M)
 			switch (CPU->Interrupt) {
 				case NMI:
 					Address = 0xFFFA;
-					BF = Instruction.Operation == BRK;
+					BF = false;
 					Operate(M, PHP);
 					BF = true;
 					IF = true;
-					CPU->InternalNMI = false;
 					break;
 				case IRQ:
-					Address = 0xFFFE;
-					BF = Instruction.Operation == BRK;
+					Address = CPU->InternalNMI ? 0xFFFA : 0xFFFE;
+					BF = false;
 					Operate(M, PHP);
 					IF = true;
 					BF = true;
 					break;
 				case NO_INTERRUPT: // BRK
-					Address = 0xFFFE;
+					Address = CPU->InternalNMI ? 0xFFFA : 0xFFFE;
 					BF = true;
 					Operate(M, PHP);
 					IF = true;
@@ -903,6 +902,7 @@ void StepCPU(machine* M)
 			Trace(M);
 			Write(M, 0x100 | SP--, Operand);
 			CPU->Interrupt = NO_INTERRUPT;
+			CPU->InternalNMI = false;
 			State++;
 			break;
 		case INTERRUPT_JUMP +4:
@@ -1351,18 +1351,9 @@ void StepCPU(machine* M)
 			break;
 	}
 
-	// Poll for interrupts at the end of an instruction, or during branch
-	// cycles 0 (opcode fetch) or 2 (taken branch, before PCH fixup).
-	bool PollForInterrupts =
-		State == FETCH ||
-		State == BRANCH+0 ||
-		State == BRANCH+2 ||
-		State == INTERRUPT_JUMP+0 ||
-		State == INTERRUPT_JUMP+1 ||
-		State == INTERRUPT_JUMP+2 ||
-		State == INTERRUPT_JUMP+3;
-
-	if (PollForInterrupts) {
+	// Poll for interrupts at the end of an instruction, or before branch
+	// cycles 0 (opcode fetch) or 2 (taken branch, PCH fixup).
+	if (State == FETCH || State == BRANCH+0 || State == BRANCH+2) {
 		if (CPU->InternalNMI) {
 			// Trigger NMI.
 			CPU->Interrupt = NMI;
