@@ -80,14 +80,11 @@ void WritePPU(machine* M, u16 Address, u8 Data)
 	ppu* PPU = &M->PPU;
 
 	// Remember the written data to emulate open-bus behavior.
-	// Does not apply to OAMDMA, since that is actually located
-	// on the CPU.
-	if (Address & 0x2000) {
-		PPU->BusData = Data;
-		// A CPU write to the PPU bus refreshes all data lines.
-		for (int I = 0; I < 8; I++)
-			PPU->BusDataRefreshCycle[I] = PPU->MasterCycle;
-	}
+	PPU->BusData = Data;
+
+	// A CPU write to the PPU bus refreshes all data lines.
+	for (int I = 0; I < 8; I++)
+		PPU->BusDataRefreshCycle[I] = PPU->MasterCycle;
 
 	switch (Address) {
 		case 0x2000: { // PPUCTRL
@@ -157,17 +154,6 @@ void WritePPU(machine* M, u16 Address, u8 Data)
 			}
 
 			PPU->V += PPU->VIncrementBy32 ? 32 : 1;
-			break;
-		}
-		case 0x4014: { // OAMDMA
-			u16 Address = u16(Data) << 8;
-			for (u32 I = 0; I < 256; I++) {
-				// The OAM DMA is actually performed by the CPU by writing
-				// to OAMDATA, so do exactly that instead of modifying the
-				// OAM directly.
-				WritePPU(M, 0x2004, Read(M, Address + I));
-			}
-			M->CPU.Stall += 513 + (M->CPU.Cycle % 2);
 			break;
 		}
 	}

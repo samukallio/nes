@@ -69,6 +69,14 @@ static inline u8 ReadController(machine* M, i32 Index)
 	return Bit;
 }
 
+static inline void WriteOAMDMA(machine* M, u8 Data)
+{
+	u16 Address = u16(Data) << 8;
+	for (u32 I = 0; I < 256; I++)
+		WritePPU(M, 0x2004, Read(M, Address + I));
+	M->CPU.Stall += 513 + (M->CPU.Cycle % 2);
+}
+
 u8 Read(machine* M, u16 Address)
 {
 	if (Address >= 0x4100)
@@ -102,7 +110,7 @@ void Write(machine* M, u16 Address, u8 Data)
 	else if (Address == 0x4015)
 		WriteAPU(M, 0x4015, Data);
 	else if (Address == 0x4014)
-		WritePPU(M, 0x4014, Data);
+		WriteOAMDMA(M, Data);
 	else if (Address >= 0x4000)
 		WriteAPU(M, Address, Data);
 	else if (Address >= 0x2000)
