@@ -346,8 +346,8 @@ void StepPPU(machine* M)
 			}
 			Count += 1;
 		}
-		PPU->SpriteCount    = Count > 8 ? 8 : Count;
-		PPU->SpriteOverflow = Count > 8;
+		PPU->SpriteCount = Count > 8 ? 8 : Count;
+		if (Count > 8) PPU->SpriteOverflow = true;
 	}
 
 	// VRAM address update logic.
