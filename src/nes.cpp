@@ -69,54 +69,66 @@ static inline u8 ReadController(machine* M, i32 Index)
 	return Bit;
 }
 
-static inline void WriteOAMDMA(machine* M, u8 Data)
-{
-	u16 Address = u16(Data) << 8;
-	for (u32 I = 0; I < 256; I++)
-		WritePPU(M, 0x2004, Read(M, Address + I));
-	M->CPU.Stall += 513 + (M->CPU.Cycle % 2);
-}
-
 u8 Read(machine* M, u16 Address)
 {
-	if (Address >= 0x4100)
-		M->BusData = ReadMapper(M, Address);
-	else if (Address == 0x4017)
-		M->BusData = (M->BusData & 0xE0) | ReadController(M, 1);
-	else if (Address == 0x4016)
-		M->BusData = (M->BusData & 0xE0) | ReadController(M, 0);
-	else if (Address == 0x4015)
-		M->BusData = ReadAPU(M, Address);
-	else if (Address >= 0x4000)
-		;
-	else if (Address >= 0x2000)
-		M->BusData = ReadPPU(M, Address & 0x2007);
-	else
-		M->BusData = M->RAM[Address & 0x07FF];
+	// $0000-$1FFF: SRAM space.
+	if (Address < 0x2000) {
+		return M->BusData = M->RAM[Address & 0x07FF];
+	}
 
-	return M->BusData;
+	// $2000-$3FFF: PPU register space.
+	if (Address < 0x4000) {
+		return M->BusData = ReadPPU(M, Address & 0x2007);
+	}
+
+	// $4000-$401F: CPU register space.
+	if (Address < 0x4020) {
+		if (Address == 0x4015) M->BusData = ReadAPU(M, Address);
+		if (Address == 0x4016) M->BusData = (M->BusData & 0xE0) | ReadController(M, 0);
+		if (Address == 0x4017) M->BusData = (M->BusData & 0xE0) | ReadController(M, 1);
+		return M->BusData;
+	}
+
+	// $4020-$FFFF: Cartridge space.
+	return M->BusData = ReadMapper(M, Address);
 }
 
 void Write(machine* M, u16 Address, u8 Data)
 {
 	M->BusData = Data;
 
-	if (Address >= 0x4100)
-		WriteMapper(M, Address, Data);
-	else if (Address == 0x4017)
-		WriteAPU(M, 0x4017, Data);
-	else if (Address == 0x4016)
-		M->InputStrobe = Data & 0x01;
-	else if (Address == 0x4015)
-		WriteAPU(M, 0x4015, Data);
-	else if (Address == 0x4014)
-		WriteOAMDMA(M, Data);
-	else if (Address >= 0x4000)
-		WriteAPU(M, Address, Data);
-	else if (Address >= 0x2000)
-		WritePPU(M, Address & 0x2007, Data);
-	else
+	// $0000-$1FFF: SRAM space.
+	if (Address < 0x2000) {
 		M->RAM[Address & 0x07FF] = Data;
+		return;
+	}
+
+	// $2000-$3FFF: PPU register space.
+	if (Address < 0x4000) {
+		WritePPU(M, Address & 0x2007, Data);
+		return;
+	}
+
+	// $4000-$401F: CPU register space.
+	if (Address < 0x4020) {
+		// OAM DMA.
+		if (Address == 0x4014) {
+			u16 Address = u16(Data) << 8;
+			for (u32 I = 0; I < 256; I++)
+				WritePPU(M, 0x2004, Read(M, Address + I));
+			M->CPU.Stall += 513 + (M->CPU.Cycle % 2);
+			return;
+		}
+		if (Address == 0x4016) {
+			M->InputStrobe = Data & 0x01;
+			return;
+		}
+		WriteAPU(M, Address, Data);
+		return;
+	}
+
+	// $4020-$FFFF: Cartridge space.
+	WriteMapper(M, Address, Data);
 }
 
 void RunUntilVerticalBlank(machine* M)

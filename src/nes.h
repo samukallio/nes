@@ -408,7 +408,7 @@ struct machine
 	apu             APU;
 	mapper          Mapper;
 
-	u8              BusData;
+	u8              BusData;                    // Last data on the CPU bus.
 
 	u8*             RAM;                        // 2K system RAM.
 	u8*             CIRAM;                      // 2K PPU internal RAM.

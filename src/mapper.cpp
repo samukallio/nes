@@ -28,48 +28,47 @@ static inline void WriteCIRAM(machine* M, u16 Address, u8 Data)
 
 u8 ReadMapper0(machine* M, u16 Address)
 {
-	if (Address >= 0x8000) {
-		u16 Mask = M->PRGROMSize - 1;
-		return M->PRGROM[Address & Mask];
-	}
-	else if (Address >= 0x6000) {
-		return M->PRGRAM[Address & 0x0FFF];
-	}
-	else if (Address >= 0x4000) {
-		// Unmapped.
-		return 0;
-	}
+	// PPU $0000-$1FFF: CHR RAM.
+	if (Address < 0x2000) return M->CHR[Address];
 
-	// PPU space.
-	else if (Address >= 0x2000) {
-		return ReadCIRAM(M, Address);
-	}
-	else {
-		return M->CHR[Address & 0x1FFF];
-	}
+	// PPU $2000-$3FFF: CIRAM.
+	if (Address < 0x4000) return ReadCIRAM(M, Address);
+
+	// CPU $4000-$5FFF: Unmapped.
+	if (Address < 0x6000) return M->BusData;
+
+	// CPU $6000-$7FFF: PRG RAM.
+	if (Address < 0x8000) return M->PRGRAM[Address & 0x0FFF];
+
+	// CPU $8000-$FFFF: PRG ROM.
+	return M->PRGROM[Address & (M->PRGROMSize - 1)];
 }
 
 void WriteMapper0(machine* M, u16 Address, u8 Data)
 {
-	if (Address >= 0x8000) {
-		// PRGROM, read only.
-		return;
-	}
-	else if (Address >= 0x6000) {
-		M->PRGRAM[Address & 0x0FFF] = Data;
-	}
-	else if (Address >= 0x4000) {
-		// Unmapped.
+	// PPU $0000-$1FFF: CHR RAM.
+	if (Address < 0x2000) {
+		M->CHR[Address] = Data;
 		return;
 	}
 
-	// PPU space.
-	else if (Address >= 0x2000) {
+	// PPU $2000-$3FFF: CIRAM.
+	if (Address < 0x4000) {
 		WriteCIRAM(M, Address, Data);
+		return;
 	}
-	else {
-		M->CHR[Address & 0x1FFF] = Data;
+
+	// CPU $4000-$5FFF: Unmapped.
+	if (Address < 0x6000) return;
+
+	// CPU $6000-$7FFF: PRG RAM.
+	if (Address < 0x8000) {
+		M->PRGRAM[Address & 0x0FFF] = Data;
+		return;
 	}
+
+	// CPU $8000-$FFFF: PRG ROM.
+	return;
 }
 
 /* --- Mapper 001 ---------------------------------------------------------- */
@@ -121,67 +120,73 @@ u8 ReadMapper1(machine* M, u16 Address)
 {
 	mapper1* M1 = &M->Mapper._1;
 
-	// CPU space.
-	if (Address >= 0x8000) {
-		u32 Base = M1->PRGMap[(Address >> 14) & 1];
-		u32 Offset = Address & 0x3FFF;
-		return M->PRGROM[Base + Offset];
-	}
-	else if (Address >= 0x6000) {
-		return M->PRGRAM[Address & 0x1FFF];
-	}
-	else if (Address >= 0x4000) {
-		// Unmapped.
-		return 0;
-	}
-
-	// PPU space.
-	else if (Address >= 0x2000) {
-		return ReadCIRAM(M, Address);
-	}
-	else {
+	// PPU $0000-$1FFF: CHR RAM.
+	if (Address < 0x2000) {
 		u32 Base = M1->CHRMap[(Address >> 12) & 1];
 		u32 Offset = Address & 0x0FFF;
 		return M->CHR[Base + Offset];
 	}
+
+	// PPU $2000-$3FFF: CIRAM.
+	if (Address < 0x4000) return ReadCIRAM(M, Address);
+
+	// CPU $4000-$5FFF: Unmapped.
+	if (Address < 0x6000) return M->BusData;
+
+	// CPU $6000-$7FFF: PRG RAM.
+	if (Address < 0x8000) return M->PRGRAM[Address & 0x1FFF];
+
+	// CPU $8000-$FFFF: PRG ROM.
+	u32 Base = M1->PRGMap[(Address >> 14) & 1];
+	u32 Offset = Address & 0x3FFF;
+	return M->PRGROM[Base + Offset];
 }
 
 void WriteMapper1(machine* M, u16 Address, u8 Data)
 {
 	mapper1* M1 = &M->Mapper._1;
 
-	if (Address >= 0x8000) {
-		if (Data & 0x80) {
-			ResetMapper1(M);
-		}
-		else {
-			M1->LoadRegister = (M1->LoadRegister >> 1) | (Data & 1) << 4;
-			M1->LoadCount += 1;
-		}
-
-		if (M1->LoadCount == 5) {
-			switch (Address & 0xE000) {
-				case 0x8000: M1->Control  = M1->LoadRegister; break;
-				case 0xA000: M1->CHRBank0 = M1->LoadRegister; break;
-				case 0xC000: M1->CHRBank1 = M1->LoadRegister; break;
-				case 0xE000: M1->PRGBank  = M1->LoadRegister & 0x0F; break;
-			}
-			M001ComputeBankMaps(M);
-			M1->LoadCount = 0;
-		}
-	}
-	else if (Address >= 0x6000) {
-		M->PRGRAM[Address & 0x1FFF] = Data;
-	}
-
-	// PPU space.
-	else if (Address >= 0x2000) {
-		WriteCIRAM(M, Address, Data);
-	}
-	else {
+	// PPU $0000-$1FFF: CHR RAM.
+	if (Address < 0x2000) {
 		u32 Base = M1->CHRMap[(Address >> 12) & 1];
 		u32 Offset = Address & 0x0FFF;
 		M->CHR[Base + Offset] = Data;
+		return;
+	}
+
+	// PPU $2000-$3FFF: CIRAM.
+	if (Address < 0x4000) {
+		WriteCIRAM(M, Address, Data);
+		return;
+	}
+
+	// CPU $4000-$5FFF: Unmapped.
+	if (Address < 0x6000) return;
+
+	// CPU $6000-$7FFF: PRG RAM.
+	if (Address < 0x8000) {
+		M->PRGRAM[Address & 0x1FFF] = Data;
+		return;
+	}
+
+	// CPU $8000-$FFFF: PRG ROM registers.
+	if (Data & 0x80) {
+		ResetMapper1(M);
+	}
+	else {
+		M1->LoadRegister = (M1->LoadRegister >> 1) | (Data & 1) << 4;
+		M1->LoadCount += 1;
+	}
+
+	if (M1->LoadCount == 5) {
+		switch (Address & 0xE000) {
+			case 0x8000: M1->Control  = M1->LoadRegister; break;
+			case 0xA000: M1->CHRBank0 = M1->LoadRegister; break;
+			case 0xC000: M1->CHRBank1 = M1->LoadRegister; break;
+			case 0xE000: M1->PRGBank  = M1->LoadRegister & 0x0F; break;
+		}
+		M001ComputeBankMaps(M);
+		M1->LoadCount = 0;
 	}
 }
 
@@ -191,53 +196,49 @@ u8 ReadMapper2(machine* M, u16 Address)
 {
 	mapper2* M2 = &M->Mapper._2;
 
-	// CPU space.
-	if (Address >= 0xC000) {
-		u32 Base = M->PRGROMSize - 0x4000;
-		u32 Offset = Address & 0x3FFF;
-		return M->PRGROM[Base + Offset];
-	}
-	else if (Address >= 0x8000) {
+	// PPU $0000-$1FFF: CHR RAM.
+	if (Address < 0x2000) return M->CHR[Address];
+
+	// PPU $2000-$3FFF: CIRAM.
+	if (Address < 0x4000) return ReadCIRAM(M, Address);
+
+	// CPU $4000-$7FFF: Unmapped.
+	if (Address < 0x8000) return M->BusData;
+
+	// CPU $8000-$BFFF: 16K switchable PRG ROM bank.
+	if (Address < 0xC000) {
 		u32 Base = M2->PRGBank * 0x4000;
 		u32 Offset = Address & 0x3FFF;
 		return M->PRGROM[Base + Offset];
 	}
-	else if (Address >= 0x4000) {
-		// Unmapped.
-		return 0;
-	}
 
-	// PPU space.
-	else if (Address >= 0x2000) {
-		return ReadCIRAM(M, Address);
-	}
-	else {
-		return M->CHR[Address & 0x1FFF];
-	}
+	// CPU $C000-$FFFF: 16K fixed PRG ROM bank.
+	u32 Base = M->PRGROMSize - 0x4000;
+	u32 Offset = Address & 0x3FFF;
+	return M->PRGROM[Base + Offset];
 }
 
 void WriteMapper2(machine* M, u16 Address, u8 Data)
 {
 	mapper2* M2 = &M->Mapper._2;
 
-	// CPU space.
-	if (Address >= 0x10000) {
-	}
-	else if (Address >= 0x8000) {
-		M2->PRGBank = Data;
-	}
-	else if (Address >= 0x4000) {
-		// Unmapped.
+	// PPU $0000-$1FFF: CHR RAM.
+	if (Address < 0x2000) {
+		M->CHR[Address] = Data;
 		return;
 	}
 
-	// PPU space.
-	else if (Address >= 0x2000) {
+	// PPU $2000-$3FFF: CIRAM.
+	if (Address < 0x4000) {
 		WriteCIRAM(M, Address, Data);
+		return;
 	}
-	else {
-		M->CHR[Address & 0x1FFF] = Data;
-	}
+
+	// CPU $4000-$7FFF: Unmapped.
+	if (Address < 0x8000) return;
+
+	// CPU $8000-$FFFF: PRG ROM bank select register.
+	M2->PRGBank = Data;
 }
 
 /* --- Mapper 003 ---------------------------------------------------------- */
@@ -246,45 +247,37 @@ u8 ReadMapper3(machine* M, u16 Address)
 {
 	mapper3* M3 = &M->Mapper._3;
 
-	if (Address >= 0x8000) {
-		u16 Mask = M->PRGROMSize - 1;
-		return M->PRGROM[Address & Mask];
-	}
-	else if (Address >= 0x4000) {
-		// Unmapped.
-		return 0;
-	}
+	// PPU $0000-$1FFF: CHR ROM.
+	if (Address < 0x2000) return M->CHR[M3->CHRBank * 8192 + Address];
 
-	// PPU space.
-	else if (Address >= 0x2000) {
-		return ReadCIRAM(M, Address);
-	}
-	else {
-		u32 Base = M3->CHRBank * 8192;
-		return M->CHR[Base + Address];
-	}
+	// PPU $2000-$3FFF: CIRAM.
+	if (Address < 0x4000) return ReadCIRAM(M, Address);
+
+	// CPU $4000-$7FFF: Unmapped.
+	if (Address < 0x8000) return M->BusData;
+
+	// CPU $8000-$FFFF: PRG ROM.
+	return M->PRGROM[Address & (M->PRGROMSize - 1)];
 }
 
 void WriteMapper3(machine* M, u16 Address, u8 Data)
 {
 	mapper3* M3 = &M->Mapper._3;
 
-	// CPU space.
-	if (Address >= 0x8000) {
-		M3->CHRBank = Data;
-	}
-	else if (Address >= 0x4000) {
-		// Unmapped.
-	}
+	// PPU $0000-$1FFF: CHR ROM (read only).
+	if (Address < 0x2000) return;
 
-	// PPU space.
-	else if (Address >= 0x2000) {
+	// PPU $2000-$3FFF: CIRAM.
+	if (Address < 0x4000) {
 		WriteCIRAM(M, Address, Data);
-	}
-	else {
-		// CHRROM, read only.
 		return;
 	}
+
+	// CPU $4000-$7FFF: Unmapped.
+	if (Address < 0x8000) return;
+
+	// CPU $8000-$FFFF: CHR ROM bank select register.
+	M3->CHRBank = Data;
 }
 
 /* --- Mapper 004 ---------------------------------------------------------- */
@@ -359,105 +352,96 @@ u8 ReadMapper4(machine* M, u16 Address)
 {
 	mapper4* M4 = &M->Mapper._4;
 
-	// CPU space.
-	if (Address >= 0x8000) {
-		u32 Base = M4->PRGMap[(Address >> 13) & 3];
-		u32 Offset = Address & 0x1FFF;
-		return M->PRGROM[Base + Offset];
-	}
-	else if (Address >= 0x6000) {
-		// CPU $6000-$7FFF: 8K PRG RAM bank.
-		if (M4->PRGRAMEnable) {
-			return M->PRGRAM[Address & 0x1FFF];
-		}
-		else {
-			return 0;
-		}
-	}
-	else if (Address >= 0x4000) {
-		// Unmapped.
-		return 0;
-	}
-
-	// PPU space.
-	else if (Address >= 0x2000) {
-		return ReadCIRAM(M, Address);
-	}
-	else {
+	// PPU $0000-$1FFF: CHR ROM.
+	if (Address < 0x2000) {
 		u32 Base = M4->CHRMap[(Address >> 10) & 7];
 		u32 Offset = Address & 0x03FF;
 		return M->CHR[Base + Offset];
 	}
+
+	// PPU $2000-$3FFF: CIRAM.
+	if (Address < 0x4000) return ReadCIRAM(M, Address);
+
+	// CPU $4000-$5FFF: Unmapped.
+	if (Address < 0x6000) return M->BusData;
+
+	// CPU $6000-$7FFF: 8K PRG RAM bank.
+	if (Address < 0x8000) {
+		if (!M4->PRGRAMEnable) return M->BusData;
+		return M->PRGRAM[Address & 0x1FFF];
+	}
+
+	// CPU $8000-$FFFF: 8K PRG ROM banks.
+	u32 Base = M4->PRGMap[(Address >> 13) & 3];
+	u32 Offset = Address & 0x1FFF;
+	return M->PRGROM[Base + Offset];
 }
 
 void WriteMapper4(machine* M, u16 Address, u8 Data)
 {
 	mapper4* M4 = &M->Mapper._4;
 
-	// CPU space.
-	if (Address >= 0x8000) {
-		// CPU $8000-$FFFF: Mapper registers.
-		switch (Address & 0xE001) {
-			case 0x8000: {
-				// Bank control register.
-				M4->BankControl = Data;
-				ComputeBankMaps_Mapper4(M);
-				break;
-			}
-			case 0x8001: {
-				// Bank data register.
-				M4->BankRegister[M4->BankControl & 7] = Data;
-				ComputeBankMaps_Mapper4(M);
-				break;
-			}
-			case 0xA000: {
-				// Nametable mirroring control.
-				M->Mapper.MirrorMode = ~Data & 0x01;
-				break;
-			}
-			case 0xA001: {
-				// PRG RAM control.
-				M4->PRGRAMEnable = (Data >> 7) & 1;
-				M4->PRGRAMProtect = (Data >> 6) & 1;
-				break;
-			}
-			case 0xC000: {
-				M4->IRQCounterPreset = Data;
-				break;
-			}
-			case 0xC001: {
-				M4->IRQCounter = 0;
-				M4->IRQCounterLoad = true;
-				break;
-			}
-			case 0xE000: {
-				M4->IRQEnable = false;
-				break;
-			}
-			case 0xE001: {
-				M4->IRQEnable = true;
-				break;
-			}
-		}
-	}
-	else if (Address >= 0x6000) {
-		// CPU $6000-$7FFF: 8K PRG RAM.
-		if (!M4->PRGRAMProtect) {
-			M->PRGRAM[Address & 0x1FFF] = Data;
-		}
-	}
-	else if (Address >= 0x4000) {
-		// Unmapped.
+	// PPU $0000-$1FFF: CHR ROM (read only).
+	if (Address < 0x2000) return;
+
+	// PPU $2000-$3FFF: CIRAM.
+	if (Address < 0x4000) {
+		WriteCIRAM(M, Address, Data);
 		return;
 	}
 
-	// PPU space.
-	else if (Address >= 0x2000) {
-		WriteCIRAM(M, Address, Data);
-	}
-	else {
-		// Read only.
+	// CPU $4000-$5FFF: Unmapped.
+	if (Address < 0x6000) return;
+
+	// CPU $6000-$7FFF: 8K PRG RAM bank.
+	if (Address < 0x8000) {
+		if (M4->PRGRAMProtect) return;
+		M->PRGRAM[Address & 0x1FFF] = Data;
 		return;
+	}
+
+	// CPU $8000-$FFFF: Mapper registers.
+	switch (Address & 0xE001) {
+		case 0x8000: {
+			// Bank control register.
+			M4->BankControl = Data;
+			ComputeBankMaps_Mapper4(M);
+			break;
+		}
+		case 0x8001: {
+			// Bank data register.
+			M4->BankRegister[M4->BankControl & 7] = Data;
+			ComputeBankMaps_Mapper4(M);
+			break;
+		}
+		case 0xA000: {
+			// Nametable mirroring control.
+			M->Mapper.MirrorMode = ~Data & 0x01;
+			break;
+		}
+		case 0xA001: {
+			// PRG RAM control.
+			M4->PRGRAMEnable = (Data >> 7) & 1;
+			M4->PRGRAMProtect = (Data >> 6) & 1;
+			break;
+		}
+		case 0xC000: {
+			M4->IRQCounterPreset = Data;
+			break;
+		}
+		case 0xC001: {
+			M4->IRQCounter = 0;
+			M4->IRQCounterLoad = true;
+			break;
+		}
+		case 0xE000: {
+			M4->IRQEnable = false;
+			break;
+		}
+		case 0xE001: {
+			M4->IRQEnable = true;
+			break;
+		}
 	}
 }
 
