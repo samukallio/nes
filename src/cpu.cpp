@@ -799,7 +799,7 @@ static inline void Trace(machine* Machine)
 	Machine->TraceLine++;
 }
 
-#define STALL if (Stalled) break;
+#define STALL if (CPU->Stall > 0) { CPU->Stall--; break; }
 
 static inline bool IsSamePage(u16 A, u16 B)
 {
@@ -824,10 +824,6 @@ void StepCPU(machine* M)
 	u16&  Indirect      = CPU->Indirect;
 	u16&  Address       = CPU->Address;
 	u8&   Operand       = CPU->Operand;
-
-	bool Stalled = CPU->Stall > 0;
-	if (Stalled)
-		CPU->Stall--;
 
 	switch (State) {
 		// --- Reset ----------------------------------------------------------
