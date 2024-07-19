@@ -68,15 +68,10 @@ i32 ReadTASFile(const char* Path, tas_frame** OutFrameData, i32* OutFrameCount)
 
 int main(int argc, char* args[])
 {
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
-	{
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
 		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		return -1;
 	}
-
-	// Initialize NES
-	machine M;
-	memset(&M, 0, sizeof(machine));
 
 	// Init video.
 	SDL_Window* Window = SDL_CreateWindow("NES Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
@@ -97,23 +92,19 @@ int main(int argc, char* args[])
 	SDL_AudioDeviceID AudioDeviceID = SDL_OpenAudioDevice(nullptr, 0, &AudioSpec, &ObtainedAudioSpec, 0);
 	SDL_PauseAudioDevice(AudioDeviceID, 0);
 
-	//
-	//tas_frame* TASFrameData = nullptr;
-	//i32 TASFrameCount = 0;
-	//ReadTASFile("tas.txt", &TASFrameData, &TASFrameCount);
+	// Init NES.
+	machine M;
+	memset(&M, 0, sizeof(machine));
 
 	u64 CurrentFrame = 0;
-
 	u64 PreviousTime = SDL_GetTicks64();
 	double TimeToNextFrame = 0.0;
+
+	f64 QueuedAudioSize = 0.0;
 
 	bool Exit = false;
 	bool Paused = false;
 	bool FrameSteppingMode = false;
-
-	M.APU.AudioSampleRate = 44100;
-
-	f64 QueuedAudioSize = 0.0;
 
 	while (!Exit) {
 
@@ -200,11 +191,12 @@ int main(int argc, char* args[])
 		SDL_QueueAudio(AudioDeviceID, M.APU.AudioBuffer, M.APU.AudioPointer);
 		M.APU.AudioPointer = 0;
 
+		// Adjust the APU output sample rate to avoid buffer under- and overruns.
 		QueuedAudioSize = 0.95 * QueuedAudioSize + 0.05 * SDL_GetQueuedAudioSize(AudioDeviceID);
 		M.APU.AudioSampleRate = 44100 + (4096 - QueuedAudioSize) * 0.2;
 		//printf("%5u %10.2lf %10.2lf\n", SDL_GetQueuedAudioSize(AudioDeviceID), QueuedAudioSize, M.APU.AudioSampleRate);
 
-		// Display frame buffer.
+		// Display the finished frame buffer.
 		SDL_LockSurface(Surface);
 		u32* FrameBuffer = M.PPU.FrameBuffer[~M.PPU.Frame & 1];
 		u32* Pixels = (u32*)Surface->pixels;
