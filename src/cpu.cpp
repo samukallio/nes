@@ -356,6 +356,14 @@ static void Operate(machine* Machine, u8 Operation)
 			A = R;
 			break;
 
+		case ALR: // unofficial
+			A &= M;
+			CF = A & 0x01;
+			A >>= 1;
+			ZF = A == 0;
+			NF = false;
+			break;
+
 		case ANC: // unofficial
 			A &= M;
 			ZF = A == 0;
@@ -367,14 +375,6 @@ static void Operate(machine* Machine, u8 Operation)
 			A &= M;
 			ZF = A == 0;
 			NF = A & 0x80;
-			break;
-
-		case ALR: // unofficial
-			A &= M;
-			CF = A & 0x01;
-			A >>= 1;
-			ZF = A == 0;
-			NF = false;
 			break;
 
 		case ARR: // unofficial
@@ -595,6 +595,14 @@ static void Operate(machine* Machine, u8 Operation)
 			NF = M & 0x80;
 			break;
 
+		case ROR:
+			R = (M >> 1) | CF << 7;
+			CF = M & 1;
+			M = R;
+			ZF = M == 0;
+			NF = M & 0x80;
+			break;
+
 		case RRA: // unofficial
 			R = (M >> 1) | CF << 7;
 			CF = M & 1;
@@ -605,14 +613,6 @@ static void Operate(machine* Machine, u8 Operation)
 			NF = R & 0x80;
 			CF = R > 0xFF;
 			A = R;
-			break;
-
-		case ROR:
-			R = (M >> 1) | CF << 7;
-			CF = M & 1;
-			M = R;
-			ZF = M == 0;
-			NF = M & 0x80;
 			break;
 
 		case SAX: // unofficial
@@ -681,14 +681,14 @@ static void Operate(machine* Machine, u8 Operation)
 			NF = Y & 0x80;
 			break;
 
-		case TXA:
-			A = X;
-			ZF = A == 0;
-			NF = A & 0x80;
+		case TSX:
+			X = SP;
+			ZF = X == 0;
+			NF = X & 0x80;
 			break;
 
-		case TYA:
-			A = Y;
+		case TXA:
+			A = X;
 			ZF = A == 0;
 			NF = A & 0x80;
 			break;
@@ -697,10 +697,10 @@ static void Operate(machine* Machine, u8 Operation)
 			SP = X;
 			break;
 
-		case TSX:
-			X = SP;
-			ZF = X == 0;
-			NF = X & 0x80;
+		case TYA:
+			A = Y;
+			ZF = A == 0;
+			NF = A & 0x80;
 			break;
 	}
 }
