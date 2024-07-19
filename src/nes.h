@@ -349,10 +349,10 @@ enum mapper_event
 	PPUFilteredA12Edge,
 };
 
-using mapper_reset  = void (*)(struct machine*);
-using mapper_read   = u8   (*)(struct machine*, u16);
-using mapper_write  = void (*)(struct machine*, u16, u8);
-using mapper_notify = void (*)(struct machine*, mapper_event);
+using mapper_reset  = void (*)(struct machine&);
+using mapper_read   = u8   (*)(struct machine&, u16);
+using mapper_write  = void (*)(struct machine&, u16, u8);
+using mapper_notify = void (*)(struct machine&, mapper_event);
 
 struct mapper
 {
@@ -422,61 +422,61 @@ struct machine
 
 /* --- cpu.cpp -------------------------------------------------------------- */
 
-void StepCPU(machine* M);
-void StepCPUPhase2(machine* M);
+void StepCPU(machine& M);
+void StepCPUPhase2(machine& M);
 
 /* --- ppu.cpp -------------------------------------------------------------- */
 
-u8   ReadPPU(machine* M, u16 Address);
-void WritePPU(machine* M, u16 Address, u8 Data);
-void StepPPU(machine* M);
+u8   ReadPPU(machine& M, u16 Address);
+void WritePPU(machine& M, u16 Address, u8 Data);
+void StepPPU(machine& M);
 
 /* --- apu.cpp -------------------------------------------------------------- */
 
-u8   ReadAPU(machine* M, u16 Address);
-void WriteAPU(machine* M, u16 Address, u8 Data);
-void StepAPU(machine* M);
+u8   ReadAPU(machine& M, u16 Address);
+void WriteAPU(machine& M, u16 Address, u8 Data);
+void StepAPU(machine& M);
 
 /* --- mapper.cpp ----------------------------------------------------------- */
 
-u8   ReadMapper0(machine* M, u16 Address);
-void WriteMapper0(machine* M, u16 Address, u8 Data);
+u8   ReadMapper0(machine& M, u16 Address);
+void WriteMapper0(machine& M, u16 Address, u8 Data);
 
-void ResetMapper1(machine* M);
-u8   ReadMapper1(machine* M, u16 Address);
-void WriteMapper1(machine* M, u16 Address, u8 Data);
+void ResetMapper1(machine& M);
+u8   ReadMapper1(machine& M, u16 Address);
+void WriteMapper1(machine& M, u16 Address, u8 Data);
 
-u8   ReadMapper2(machine* M, u16 Address);
-void WriteMapper2(machine* M, u16 Address, u8 Data);
+u8   ReadMapper2(machine& M, u16 Address);
+void WriteMapper2(machine& M, u16 Address, u8 Data);
 
-u8   ReadMapper3(machine* M, u16 Address);
-void WriteMapper3(machine* M, u16 Address, u8 Data);
+u8   ReadMapper3(machine& M, u16 Address);
+void WriteMapper3(machine& M, u16 Address, u8 Data);
 
-void ResetMapper4(machine* M);
-u8   ReadMapper4(machine* M, u16 Address);
-void WriteMapper4(machine* M, u16 Address, u8 Data);
-void NotifyMapper4(machine* M, mapper_event Event);
+void ResetMapper4(machine& M);
+u8   ReadMapper4(machine& M, u16 Address);
+void WriteMapper4(machine& M, u16 Address, u8 Data);
+void NotifyMapper4(machine& M, mapper_event Event);
 
-inline u8 ReadMapper(machine* M, u16 Address)
+inline u8 ReadMapper(machine& M, u16 Address)
 {
-	return M->Mapper.Read(M, Address);
+	return M.Mapper.Read(M, Address);
 }
 
-inline void WriteMapper(machine* M, u16 Address, u8 Data)
+inline void WriteMapper(machine& M, u16 Address, u8 Data)
 {
-	M->Mapper.Write(M, Address, Data);
+	M.Mapper.Write(M, Address, Data);
 }
 
 /* --- nes.cpp -------------------------------------------------------------- */
 
-i32  Load(machine* M, const char* Path);
-void Reset(machine* M);
-void RunUntilVerticalBlank(machine* M);
+i32  Load(machine& M, const char* Path);
+void Reset(machine& M);
+void RunUntilVerticalBlank(machine& M);
 
-u8   Read(machine* M, u16 Address);
-void Write(machine* M, u16 Address, u8 Data);
+u8   Read(machine& M, u16 Address);
+void Write(machine& M, u16 Address, u8 Data);
 
-inline u16 Read16(machine* M, u16 Address)
+inline u16 Read16(machine& M, u16 Address)
 {
 	u16 L = Read(M, Address);
 	u16 H = Read(M, Address + 1);

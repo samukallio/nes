@@ -75,8 +75,8 @@ int main(int argc, char* args[])
 	}
 
 	// Initialize NES
-	machine* M = (machine*)calloc(1, sizeof(machine));
-	memset(M, 0, sizeof(machine));
+	machine M;
+	memset(&M, 0, sizeof(machine));
 
 	// Init video.
 	SDL_Window* Window = SDL_CreateWindow("NES Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
@@ -111,7 +111,7 @@ int main(int argc, char* args[])
 	bool Paused = false;
 	bool FrameSteppingMode = false;
 
-	M->APU.AudioSampleRate = 44100;
+	M.APU.AudioSampleRate = 44100;
 
 	f64 QueuedAudioSize = 0.0;
 
@@ -132,7 +132,7 @@ int main(int argc, char* args[])
 
 					if (Result >= 0) {
 						char Title[1024];
-						snprintf(Title, 1024, "NES Emulator - %s (Mapper %d)\n", Path, M->Mapper.ID);
+						snprintf(Title, 1024, "NES Emulator - %s (Mapper %d)\n", Path, M.Mapper.ID);
 						SDL_SetWindowTitle(Window, Title);
 					}
 					else {
@@ -145,16 +145,16 @@ int main(int argc, char* args[])
 			}
 			// T: Open/close debug trace file.
 			if (Event.type == SDL_KEYDOWN && Event.key.keysym.scancode == SDL_SCANCODE_T) {
-				if (M->TraceFile) {
+				if (M.TraceFile) {
 					printf("Closing trace file\n");
-					fclose(M->TraceFile);
-					M->TraceFile = nullptr;
-					M->TraceLine = 0;
+					fclose(M.TraceFile);
+					M.TraceFile = nullptr;
+					M.TraceLine = 0;
 				}
 				else {
 					printf("Opening trace file\n");
-					M->TraceFile = fopen("trace.txt", "wb");
-					M->TraceLine = 0;
+					M.TraceFile = fopen("trace.txt", "wb");
+					M.TraceLine = 0;
 				}
 			}
 			// P: Pause emulator.
@@ -175,19 +175,19 @@ int main(int argc, char* args[])
 
 		if (Exit) break;
 
-		if (!M->IsLoaded) continue;
+		if (!M.IsLoaded) continue;
 
 		if (!Paused) {
 			const u8* Keys = SDL_GetKeyboardState(nullptr);
-			M->Input[0] = 0x00;
-			if (Keys[SDL_SCANCODE_A]     ) M->Input[0] |= ButtonB;
-			if (Keys[SDL_SCANCODE_S]     ) M->Input[0] |= ButtonA;
-			if (Keys[SDL_SCANCODE_RETURN]) M->Input[0] |= ButtonStart;
-			if (Keys[SDL_SCANCODE_SPACE] ) M->Input[0] |= ButtonSelect;
-			if (Keys[SDL_SCANCODE_UP]    ) M->Input[0] |= ButtonUp;
-			if (Keys[SDL_SCANCODE_DOWN]  ) M->Input[0] |= ButtonDown;
-			if (Keys[SDL_SCANCODE_LEFT]  ) M->Input[0] |= ButtonLeft;
-			if (Keys[SDL_SCANCODE_RIGHT] ) M->Input[0] |= ButtonRight;
+			M.Input[0] = 0x00;
+			if (Keys[SDL_SCANCODE_A]     ) M.Input[0] |= ButtonB;
+			if (Keys[SDL_SCANCODE_S]     ) M.Input[0] |= ButtonA;
+			if (Keys[SDL_SCANCODE_RETURN]) M.Input[0] |= ButtonStart;
+			if (Keys[SDL_SCANCODE_SPACE] ) M.Input[0] |= ButtonSelect;
+			if (Keys[SDL_SCANCODE_UP]    ) M.Input[0] |= ButtonUp;
+			if (Keys[SDL_SCANCODE_DOWN]  ) M.Input[0] |= ButtonDown;
+			if (Keys[SDL_SCANCODE_LEFT]  ) M.Input[0] |= ButtonLeft;
+			if (Keys[SDL_SCANCODE_RIGHT] ) M.Input[0] |= ButtonRight;
 
 			RunUntilVerticalBlank(M);
 		}
@@ -197,16 +197,16 @@ int main(int argc, char* args[])
 		}
 
 		// Queue audio.
-		SDL_QueueAudio(AudioDeviceID, M->APU.AudioBuffer, M->APU.AudioPointer);
-		M->APU.AudioPointer = 0;
+		SDL_QueueAudio(AudioDeviceID, M.APU.AudioBuffer, M.APU.AudioPointer);
+		M.APU.AudioPointer = 0;
 
 		QueuedAudioSize = 0.95 * QueuedAudioSize + 0.05 * SDL_GetQueuedAudioSize(AudioDeviceID);
-		M->APU.AudioSampleRate = 44100 + (4096 - QueuedAudioSize) * 0.2;
-		//printf("%5u %10.2lf %10.2lf\n", SDL_GetQueuedAudioSize(AudioDeviceID), QueuedAudioSize, M->APU.AudioSampleRate);
+		M.APU.AudioSampleRate = 44100 + (4096 - QueuedAudioSize) * 0.2;
+		//printf("%5u %10.2lf %10.2lf\n", SDL_GetQueuedAudioSize(AudioDeviceID), QueuedAudioSize, M.APU.AudioSampleRate);
 
 		// Display frame buffer.
 		SDL_LockSurface(Surface);
-		u32* FrameBuffer = M->PPU.FrameBuffer[~M->PPU.Frame & 1];
+		u32* FrameBuffer = M.PPU.FrameBuffer[~M.PPU.Frame & 1];
 		u32* Pixels = (u32*)Surface->pixels;
 		for (i32 Y = 0; Y < 960; Y++) {
 			u32* FrameBufferLine = FrameBuffer + (Y >> 2) * 256;

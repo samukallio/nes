@@ -3,9 +3,9 @@
 
 #include "nes.h"
 
-u8 ReadAPU(machine* M, u16 Address)
+u8 ReadAPU(machine& M, u16 Address)
 {
-	apu* APU = &M->APU;
+	apu* APU = &M.APU;
 
 	switch (Address) {
 		case 0x4015: {
@@ -31,9 +31,9 @@ u8 ReadAPU(machine* M, u16 Address)
 	return 0;
 }
 
-void WriteAPU(machine* M, u16 Address, u8 Data)
+void WriteAPU(machine& M, u16 Address, u8 Data)
 {
-	apu* APU = &M->APU;
+	apu* APU = &M.APU;
 
 	switch (Address) {
 		// Pulse 1 & 2.
@@ -177,9 +177,9 @@ static inline u16 SweepTargetPeriod(apu_pulse* P, bool NegateOnesComplement)
 	return Period < 0 ? 0 : u16(Period);
 }
 
-void StepAPU(machine* M)
+void StepAPU(machine& M)
 {
-	apu* APU = &M->APU;
+	apu* APU = &M.APU;
 
 	APU->Cycle += 1;
 	APU->FrameCycle += 1;
@@ -396,7 +396,7 @@ void StepAPU(machine* M)
 
 		// Handle sample DMA.
 		if (D->SampleBufferEmpty && D->SampleTransferCounter > 0) {
-			M->CPU.Stall += 4;
+			M.CPU.Stall += 4;
 			
 			D->SampleBuffer = Read(M, D->SampleTransferPointer);
 			D->SampleBufferEmpty = false;

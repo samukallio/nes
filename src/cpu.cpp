@@ -5,18 +5,18 @@
 #include "nes.h"
 
 #define USING_CPU_REGISTERS \
-	u8   &A  = CPU->A ; \
-	u8   &X  = CPU->X ; \
-	u8   &Y  = CPU->Y ; \
-	u8   &SP = CPU->SP; \
-	u16  &PC = CPU->PC; \
-	bool &CF = CPU->CF; \
-	bool &ZF = CPU->ZF; \
-	bool &IF = CPU->IF; \
-	bool &DF = CPU->DF; \
-	bool &BF = CPU->BF; \
-	bool &VF = CPU->VF; \
-	bool &NF = CPU->NF; \
+	u8&   A  = CPU.A ; \
+	u8&   X  = CPU.X ; \
+	u8&   Y  = CPU.Y ; \
+	u8&   SP = CPU.SP; \
+	u16&  PC = CPU.PC; \
+	bool& CF = CPU.CF; \
+	bool& ZF = CPU.ZF; \
+	bool& IF = CPU.IF; \
+	bool& DF = CPU.DF; \
+	bool& BF = CPU.BF; \
+	bool& VF = CPU.VF; \
+	bool& NF = CPU.NF; \
 
 enum cpu_state
 {
@@ -336,13 +336,13 @@ const cpu_instruction InstructionTable[256] =
 	{ 0xFF, ISC, ABSOLUTE_X, MODIFY       },
 };
 
-static void Operate(machine* Machine, u8 Operation)
+static void Operate(machine& Machine, u8 Operation)
 {
-	cpu* CPU = &Machine->CPU;
+	cpu& CPU = Machine.CPU;
 	USING_CPU_REGISTERS
 
 	// Operand register.
-	u8& M  = CPU->Operand;
+	u8& M = CPU.Operand;
 	// Temporary registers.
 	u32 R;
 
@@ -705,20 +705,20 @@ static void Operate(machine* Machine, u8 Operation)
 	}
 }
 
-static inline void Trace(machine* Machine)
+static inline void Trace(machine& Machine)
 {
-	FILE* F = Machine->TraceFile;
+	FILE* F = Machine.TraceFile;
 	if (!F) return;
 
-	cpu* CPU = &Machine->CPU;
+	cpu& CPU = Machine.CPU;
 
-	u8 Opcode = CPU->Instruction.Opcode;
-	char const* OperationName = OperationNameTable[CPU->Instruction.Operation];
+	u8 Opcode = CPU.Instruction.Opcode;
+	char const* OperationName = OperationNameTable[CPU.Instruction.Operation];
 
 	char C1[16] = {0};
 	char C2[16] = {0};
 
-	switch (CPU->Instruction.InitialState & ~7) {
+	switch (CPU.Instruction.InitialState & ~7) {
 		case RESET:
 			sprintf(C2, "--- RESET ---");
 			break;
@@ -732,83 +732,83 @@ static inline void Trace(machine* Machine)
 			sprintf(C2, OperationName);
 			break;
 		case INTERRUPT_JUMP:
-			if (CPU->Interrupt == NO_INTERRUPT) {
+			if (CPU.Interrupt == NO_INTERRUPT) {
 				sprintf(C1, "%02X", Opcode);
 				sprintf(C2, OperationName);
 			}
 			else {
 				sprintf(C1, "--");
-				sprintf(C2, "*** %s ***", (CPU->Interrupt == NMI ? "NMI" : "IRQ"));
+				sprintf(C2, "*** %s ***", (CPU.Interrupt == NMI ? "NMI" : "IRQ"));
 			}
 			break;
 		case BRANCH:
-			sprintf(C1, "%02X %02X", Opcode, CPU->Immediate);
-			sprintf(C2, "%s $%02X", OperationName, CPU->Address);
+			sprintf(C1, "%02X %02X", Opcode, CPU.Immediate);
+			sprintf(C2, "%s $%02X", OperationName, CPU.Address);
 			break;
 		case IMMEDIATE:
-			sprintf(C1, "%02X %02X", Opcode, CPU->Immediate);
-			sprintf(C2, "%s #$%02X", OperationName, CPU->Immediate);
+			sprintf(C1, "%02X %02X", Opcode, CPU.Immediate);
+			sprintf(C2, "%s #$%02X", OperationName, CPU.Immediate);
 			break;
 		case ZERO_PAGE:
-			sprintf(C1, "%02X %02X", Opcode, CPU->Immediate);
-			sprintf(C2, "%s $%02X", OperationName, CPU->Immediate);
+			sprintf(C1, "%02X %02X", Opcode, CPU.Immediate);
+			sprintf(C2, "%s $%02X", OperationName, CPU.Immediate);
 			break;
 		case ZERO_PAGE_X:
-			sprintf(C1, "%02X %02X", Opcode, CPU->Immediate);
-			sprintf(C2, "%s $%02X,X", OperationName, CPU->Immediate);
+			sprintf(C1, "%02X %02X", Opcode, CPU.Immediate);
+			sprintf(C2, "%s $%02X,X", OperationName, CPU.Immediate);
 			break;
 		case ZERO_PAGE_Y:
-			sprintf(C1, "%02X %02X", Opcode, CPU->Immediate);
-			sprintf(C2, "%s $%02X,Y", OperationName, CPU->Immediate);
+			sprintf(C1, "%02X %02X", Opcode, CPU.Immediate);
+			sprintf(C2, "%s $%02X,Y", OperationName, CPU.Immediate);
 			break;
 		case SUBROUTINE_JUMP:
 		case ABSOLUTE_JUMP:
-			sprintf(C1, "%02X %02X %02X", Opcode, CPU->Immediate & 0xFF, CPU->Immediate >> 8);
-			sprintf(C2, "%s $%04X", OperationName, CPU->Immediate);
+			sprintf(C1, "%02X %02X %02X", Opcode, CPU.Immediate & 0xFF, CPU.Immediate >> 8);
+			sprintf(C2, "%s $%04X", OperationName, CPU.Immediate);
 			break;
 		case ABSOLUTE:
-			sprintf(C1, "%02X %02X %02X", Opcode, CPU->Immediate & 0xFF, CPU->Immediate >> 8);
-			sprintf(C2, "%s $%04X", OperationName, CPU->Immediate);
+			sprintf(C1, "%02X %02X %02X", Opcode, CPU.Immediate & 0xFF, CPU.Immediate >> 8);
+			sprintf(C2, "%s $%04X", OperationName, CPU.Immediate);
 			break;
 		case ABSOLUTE_X:
-			sprintf(C1, "%02X %02X %02X", Opcode, CPU->Immediate & 0xFF, CPU->Immediate >> 8);
-			sprintf(C2, "%s $%04X,X", OperationName, CPU->Immediate);
+			sprintf(C1, "%02X %02X %02X", Opcode, CPU.Immediate & 0xFF, CPU.Immediate >> 8);
+			sprintf(C2, "%s $%04X,X", OperationName, CPU.Immediate);
 			break;
 		case ABSOLUTE_Y:
-			sprintf(C1, "%02X %02X %02X", Opcode, CPU->Immediate & 0xFF, CPU->Immediate >> 8);
-			sprintf(C2, "%s $%04X,Y", OperationName, CPU->Immediate);
+			sprintf(C1, "%02X %02X %02X", Opcode, CPU.Immediate & 0xFF, CPU.Immediate >> 8);
+			sprintf(C2, "%s $%04X,Y", OperationName, CPU.Immediate);
 			break;
 		case INDIRECT_JUMP:
-			sprintf(C1, "%02X %02X %02X", Opcode, CPU->Immediate & 0xFF, CPU->Immediate >> 8);
-			sprintf(C2, "%s ($%04X)", OperationName, CPU->Immediate);
+			sprintf(C1, "%02X %02X %02X", Opcode, CPU.Immediate & 0xFF, CPU.Immediate >> 8);
+			sprintf(C2, "%s ($%04X)", OperationName, CPU.Immediate);
 			break;
 		case INDEXED_INDIRECT:
-			sprintf(C1, "%02X %02X", Opcode, CPU->Immediate);
-			sprintf(C2, "%s (%02X,X)", OperationName, CPU->Immediate);
+			sprintf(C1, "%02X %02X", Opcode, CPU.Immediate);
+			sprintf(C2, "%s (%02X,X)", OperationName, CPU.Immediate);
 			break;
 		case INDIRECT_INDEXED:
-			sprintf(C1, "%02X %02X", Opcode, CPU->Immediate);
-			sprintf(C2, "%s (%02X),Y", OperationName, CPU->Immediate);
+			sprintf(C1, "%02X %02X", Opcode, CPU.Immediate);
+			sprintf(C2, "%s (%02X),Y", OperationName, CPU.Immediate);
 			break;
 	}
 
 	fprintf(F,
 		"%04X  %-8s  %-30s A:%02X X:%02X Y:%02X SP:%02X\n",
-		CPU->InstructionPC, C1, C2, CPU->A, CPU->X, CPU->Y, CPU->SP);
+		CPU.InstructionPC, C1, C2, CPU.A, CPU.X, CPU.Y, CPU.SP);
 
-	Machine->TraceLine++;
+	Machine.TraceLine++;
 }
 
-#define STALL if (CPU->Stall > 0) { CPU->Stall--; break; }
+#define STALL if (CPU.Stall > 0) { CPU.Stall--; break; }
 
 static inline bool IsSamePage(u16 A, u16 B)
 {
 	return (A & 0xFF00) == (B & 0xFF00);
 }
 
-void StepCPU(machine* M)
+void StepCPU(machine& M)
 {
-	cpu* CPU = &M->CPU;
+	cpu& CPU = M.CPU;
 	USING_CPU_REGISTERS
 
 	// Previous state of the interrupt flag.  On the real hardware, the CLI, SEI,
@@ -817,13 +817,13 @@ void StepCPU(machine* M)
 	// before polling, but the polling then looks at the previous flag state.
 	bool PreviousIF = IF;
 
-	auto& Instruction   = CPU->Instruction;
-	u8&   State         = CPU->State;
-	u16&  InstructionPC = CPU->InstructionPC;
-	u16&  Immediate     = CPU->Immediate;
-	u16&  Indirect      = CPU->Indirect;
-	u16&  Address       = CPU->Address;
-	u8&   Operand       = CPU->Operand;
+	auto& Instruction   = CPU.Instruction;
+	u8&   State         = CPU.State;
+	u16&  InstructionPC = CPU.InstructionPC;
+	u16&  Immediate     = CPU.Immediate;
+	u16&  Indirect      = CPU.Indirect;
+	u16&  Address       = CPU.Address;
+	u8&   Operand       = CPU.Operand;
 
 	switch (State) {
 		// --- Reset ----------------------------------------------------------
@@ -859,7 +859,7 @@ void StepCPU(machine* M)
 		case FETCH:
 		case FETCH_NO_POLL:
 			STALL;
-			if (CPU->Interrupt) {
+			if (CPU.Interrupt) {
 				Read(M, PC);
 				// Start interrupt sequence for IRQ.
 				State = INTERRUPT_JUMP;
@@ -890,7 +890,7 @@ void StepCPU(machine* M)
 			State++;
 			break;
 		case INTERRUPT_JUMP +3:
-			switch (CPU->Interrupt) {
+			switch (CPU.Interrupt) {
 				case NMI:
 					Address = 0xFFFA;
 					BF = false;
@@ -899,14 +899,14 @@ void StepCPU(machine* M)
 					IF = true;
 					break;
 				case IRQ:
-					Address = CPU->InternalNMI ? 0xFFFA : 0xFFFE;
+					Address = CPU.InternalNMI ? 0xFFFA : 0xFFFE;
 					BF = false;
 					Operate(M, PHP);
 					IF = true;
 					BF = true;
 					break;
 				case NO_INTERRUPT: // BRK
-					Address = CPU->InternalNMI ? 0xFFFA : 0xFFFE;
+					Address = CPU.InternalNMI ? 0xFFFA : 0xFFFE;
 					BF = true;
 					Operate(M, PHP);
 					IF = true;
@@ -914,8 +914,8 @@ void StepCPU(machine* M)
 			}
 			Trace(M);
 			Write(M, 0x100 | SP--, Operand);
-			CPU->Interrupt = NO_INTERRUPT;
-			CPU->InternalNMI = false;
+			CPU.Interrupt = NO_INTERRUPT;
+			CPU.InternalNMI = false;
 			State++;
 			break;
 		case INTERRUPT_JUMP +4:
@@ -1362,40 +1362,40 @@ void StepCPU(machine* M)
 	// BRANCH+1, but this seems to be necessary to pass the cpu_interrupts_v2 test
 	// (and I haven't had any tests fail because of it).
 	if (State == FETCH || State == BRANCH+0 || State == BRANCH+1 || State == BRANCH+2) {
-		if (CPU->InternalNMI) {
+		if (CPU.InternalNMI) {
 			// Trigger NMI.
-			CPU->Interrupt = NMI;
+			CPU.Interrupt = NMI;
 		}
-		else if (CPU->InternalIRQ) {
+		else if (CPU.InternalIRQ) {
 			// CLI, SEI and PLP modify the interrupt flag after polling for interrupts.
 			if (Instruction.Operation == CLI ||
 			    Instruction.Operation == SEI ||
 			    Instruction.Operation == PLP) {
 				// Trigger IRQ, if interrupt flag was set.
-				if (!PreviousIF) CPU->Interrupt = IRQ;
+				if (!PreviousIF) CPU.Interrupt = IRQ;
 			}
 			else {
 				// Trigger IRQ, if interrupt flag is set.
-				if (!IF) CPU->Interrupt = IRQ;
+				if (!IF) CPU.Interrupt = IRQ;
 			}
 		}
 	}
 
-	CPU->Cycle++;
+	CPU.Cycle++;
 }
 
-void StepCPUPhase2(machine* Machine)
+void StepCPUPhase2(machine& Machine)
 {
-	cpu* CPU = &Machine->CPU;
+	cpu& CPU = Machine.CPU;
 
 	// Update NMI edge detector.
-	if (CPU->NMI && !CPU->PreviousNMI) {
+	if (CPU.NMI && !CPU.PreviousNMI) {
 		// NMI request edge detected, raise internal NMI
 		// flag that takes effect from the next cycle.
-		CPU->InternalNMI = true;
+		CPU.InternalNMI = true;
 	}
-	CPU->PreviousNMI = CPU->NMI;
+	CPU.PreviousNMI = CPU.NMI;
 
 	// Update IRQ level detector.
-	CPU->InternalIRQ = CPU->IRQ;
+	CPU.InternalIRQ = CPU.IRQ;
 }
