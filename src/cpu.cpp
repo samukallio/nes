@@ -811,15 +811,19 @@ void StepCPU(machine* M)
 	cpu* CPU = &M->CPU;
 	USING_CPU_REGISTERS
 
-	u8 State = CPU->State;
-	cpu_instruction& Instruction = CPU->Instruction;
-	u16& InstructionPC = CPU->InstructionPC;
-	u16& Immediate = CPU->Immediate;
-	u16& Indirect  = CPU->Indirect;
-	u16& Address = CPU->Address;
-	u8& Operand = CPU->Operand;
-
+	// Previous state of the interrupt flag.  On the real hardware, the CLI, SEI,
+	// and PLP instructions change the interrupt flag after polling for interrupts.
+	// In the current implementation, these instructions change the interrupt flag
+	// before polling, but the polling then looks at the previous flag state.
 	bool PreviousIF = IF;
+
+	auto& Instruction   = CPU->Instruction;
+	u8&   State         = CPU->State;
+	u16&  InstructionPC = CPU->InstructionPC;
+	u16&  Immediate     = CPU->Immediate;
+	u16&  Indirect      = CPU->Indirect;
+	u16&  Address       = CPU->Address;
+	u8&   Operand       = CPU->Operand;
 
 	bool Stalled = CPU->Stall > 0;
 	if (Stalled)
@@ -1381,9 +1385,7 @@ void StepCPU(machine* M)
 		}
 	}
 
-	// Set new state and go to next cycle.
-	CPU->State = State;
-	CPU->Cycle += 1;
+	CPU->Cycle++;
 }
 
 void StepCPUPhase2(machine* Machine)
