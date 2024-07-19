@@ -33,79 +33,79 @@ static const mapper_entry* FindMapperEntry(i32 MapperID)
 	return nullptr;
 }
 
-void Reset(machine& M)
+void Reset(machine& Machine)
 {
-	if (M.Mapper.Reset) M.Mapper.Reset(M);
+	if (Machine.Mapper.Reset) Machine.Mapper.Reset(Machine);
 
-	M.PPU.BackgroundPatternTable = 0;
-	M.PPU.SpritePatternTable = 0;
-	M.PPU.Sprite8x16 = false;
-	M.PPU.VIncrementBy32 = false;
-	M.PPU.MasterSlaveSelect = false;
-	M.PPU.NMIOutput = false;
+	Machine.PPU.BackgroundPatternTable = 0;
+	Machine.PPU.SpritePatternTable = 0;
+	Machine.PPU.Sprite8x16 = false;
+	Machine.PPU.VIncrementBy32 = false;
+	Machine.PPU.MasterSlaveSelect = false;
+	Machine.PPU.NMIOutput = false;
 
-	M.PPU.OAMAddress = 0;
+	Machine.PPU.OAMAddress = 0;
 
-	M.PPU.V = 0;
-	M.PPU.T = 0;
-	M.PPU.X = 0;
-	M.PPU.W = 0;
+	Machine.PPU.V = 0;
+	Machine.PPU.T = 0;
+	Machine.PPU.X = 0;
+	Machine.PPU.W = 0;
 
-	M.PPU.Frame = 0;
-	M.PPU.ScanY = 261;
-	M.PPU.ScanX = 0;
+	Machine.PPU.Frame = 0;
+	Machine.PPU.ScanY = 261;
+	Machine.PPU.ScanX = 0;
 
-	M.APU.AudioPointer = 0;
+	Machine.APU.AudioPointer = 0;
 
-	M.APU.Noise.NoiseRegister = 0x0001;
+	Machine.APU.Noise.NoiseRegister = 0x0001;
 
-	M.CPU.State = 0;
+	Machine.CPU.State = 0;
 }
 
-static inline u8 ReadController(machine& M, i32 Index)
+static inline u8 ReadController(machine& Machine, i32 Index)
 {
-	u8 Bit = M.InputData[Index] & 0x01;
-	M.InputData[Index] = 0x80 | M.InputData[Index] >> 1;
+	u8 Bit = Machine.InputData[Index] & 0x01;
+	Machine.InputData[Index] = 0x80 | Machine.InputData[Index] >> 1;
 	return Bit;
 }
 
-u8 Read(machine& M, u16 Address)
+u8 Read(machine& Machine, u16 Address)
 {
 	// $0000-$1FFF: SRAM space.
 	if (Address < 0x2000) {
-		return M.BusData = M.RAM[Address & 0x07FF];
+		return Machine.BusData = Machine.RAM[Address & 0x07FF];
 	}
 
 	// $2000-$3FFF: PPU register space.
 	if (Address < 0x4000) {
-		return M.BusData = ReadPPU(M, Address & 0x2007);
+		return Machine.BusData = ReadPPU(Machine, Address & 0x2007);
 	}
 
 	// $4000-$401F: CPU register space.
 	if (Address < 0x4020) {
-		if (Address == 0x4015) M.BusData = ReadAPU(M, Address);
-		if (Address == 0x4016) M.BusData = (M.BusData & 0xE0) | ReadController(M, 0);
-		if (Address == 0x4017) M.BusData = (M.BusData & 0xE0) | ReadController(M, 1);
-		return M.BusData;
+		if (Address == 0x4015) Machine.BusData = ReadAPU(Machine, Address);
+		if (Address == 0x4016) Machine.BusData = (Machine.BusData & 0xE0) | ReadController(Machine, 0);
+		if (Address == 0x4017) Machine.BusData = (Machine.BusData & 0xE0) | ReadController(Machine, 1);
+		return Machine.BusData;
 	}
 
 	// $4020-$FFFF: Cartridge space.
-	return M.BusData = ReadMapper(M, Address);
+	return Machine.BusData = ReadMapper(Machine, Address);
 }
 
-void Write(machine& M, u16 Address, u8 Data)
+void Write(machine& Machine, u16 Address, u8 Data)
 {
-	M.BusData = Data;
+	Machine.BusData = Data;
 
 	// $0000-$1FFF: SRAM space.
 	if (Address < 0x2000) {
-		M.RAM[Address & 0x07FF] = Data;
+		Machine.RAM[Address & 0x07FF] = Data;
 		return;
 	}
 
 	// $2000-$3FFF: PPU register space.
 	if (Address < 0x4000) {
-		WritePPU(M, Address & 0x2007, Data);
+		WritePPU(Machine, Address & 0x2007, Data);
 		return;
 	}
 
@@ -115,75 +115,74 @@ void Write(machine& M, u16 Address, u8 Data)
 		if (Address == 0x4014) {
 			u16 Address = u16(Data) << 8;
 			for (u32 I = 0; I < 256; I++)
-				WritePPU(M, 0x2004, Read(M, Address + I));
-			M.CPU.Stall += 513 + (M.CPU.Cycle % 2);
+				WritePPU(Machine, 0x2004, Read(Machine, Address + I));
+			Machine.CPU.Stall += 513 + (Machine.CPU.Cycle % 2);
 			return;
 		}
 		if (Address == 0x4016) {
-			M.InputStrobe = Data & 0x01;
+			Machine.InputStrobe = Data & 0x01;
 			return;
 		}
-		WriteAPU(M, Address, Data);
+		WriteAPU(Machine, Address, Data);
 		return;
 	}
 
 	// $4020-$FFFF: Cartridge space.
-	WriteMapper(M, Address, Data);
+	WriteMapper(Machine, Address, Data);
 }
 
-void RunUntilVerticalBlank(machine& M)
+void RunUntilVerticalBlank(machine& Machine)
 {
-	cpu& CPU = M.CPU;
-	apu& APU = M.APU;
-	ppu& PPU = M.PPU;
-	mapper& Mapper = M.Mapper;
+	cpu& CPU = Machine.CPU;
+	apu& APU = Machine.APU;
+	ppu& PPU = Machine.PPU;
+	mapper& Mapper = Machine.Mapper;
 
 	u64 VBC = PPU.VerticalBlankCount;
 
 	while (PPU.VerticalBlankCount == VBC) {
-		if (M.InputStrobe) {
-			M.InputData[0] = M.Input[0];
-			M.InputData[1] = M.Input[1];
+		if (Machine.InputStrobe) {
+			Machine.InputData[0] = Machine.Input[0];
+			Machine.InputData[1] = Machine.Input[1];
 		}
 
 		// Cycle 0
-		StepPPU(M);
-		StepAPU(M);
-		StepCPU(M);
+		StepPPU(Machine);
+		StepAPU(Machine);
+		StepCPU(Machine);
 
 		// Cycle 4
-		StepPPU(M);
+		StepPPU(Machine);
 
 		// Cycle 6
 		CPU.NMI = PPU.VerticalBlankFlag && PPU.NMIOutput;
 		CPU.IRQ = Mapper.IRQTrigger > 0 || APU.FrameInterrupt || APU.DMC.Interrupt;
-		StepCPUPhase2(M);
+		StepCPUPhase2(Machine);
 
 		// Cycle 8
-		StepPPU(M);
+		StepPPU(Machine);
 
 		// Cycle 12
-		M.MasterCycle += 12;
+		Machine.MasterCycle += 12;
 
-		if (Mapper.IRQTrigger > 0)
-			Mapper.IRQTrigger--;
+		if (Mapper.IRQTrigger > 0) Mapper.IRQTrigger--;
 	}
 }
 
-void Unload(machine& M)
+void Unload(machine& Machine)
 {
-	free(M.RAM); M.RAM = nullptr;
-	free(M.CIRAM); M.CIRAM = nullptr;
-	free(M.PRGRAM); M.PRGRAM = nullptr;
-	free(M.PRGROM); M.PRGROM = nullptr;
-	free(M.CHR); M.CHR = nullptr;
-	free(M.APU.AudioBuffer); M.APU.AudioBuffer = nullptr;
-	free(M.PPU.FrameBuffer[0]); M.PPU.FrameBuffer[0] = nullptr;
-	free(M.PPU.FrameBuffer[1]); M.PPU.FrameBuffer[1] = nullptr;
-	M.IsLoaded = false;
+	free(Machine.RAM               ); Machine.RAM = nullptr;
+	free(Machine.CIRAM             ); Machine.CIRAM = nullptr;
+	free(Machine.PRGRAM            ); Machine.PRGRAM = nullptr;
+	free(Machine.PRGROM            ); Machine.PRGROM = nullptr;
+	free(Machine.CHR               ); Machine.CHR = nullptr;
+	free(Machine.APU.AudioBuffer   ); Machine.APU.AudioBuffer = nullptr;
+	free(Machine.PPU.FrameBuffer[0]); Machine.PPU.FrameBuffer[0] = nullptr;
+	free(Machine.PPU.FrameBuffer[1]); Machine.PPU.FrameBuffer[1] = nullptr;
+	Machine.IsLoaded = false;
 }
 
-i32 Load(machine& M, const char* Path)
+i32 Load(machine& Machine, const char* Path)
 {
 	struct ines_header
 	{
@@ -197,8 +196,8 @@ i32 Load(machine& M, const char* Path)
 	};
 
 	// Clear current data.
-	Unload(M);
-	memset(&M, 0, sizeof(machine));
+	Unload(Machine);
+	memset(&Machine, 0, sizeof(machine));
 
 	FILE* File = fopen(Path, "rb");
 	if (!File) return -1;
@@ -230,52 +229,52 @@ i32 Load(machine& M, const char* Path)
 		return -1;
 	}
 
-	M.Mapper.ID         = MapperID;
-	M.Mapper.MirrorMode = MirrorMode;
-	M.Mapper.Reset      = ME->Reset;
-	M.Mapper.Read       = ME->Read;
-	M.Mapper.Write      = ME->Write;
-	M.Mapper.Notify     = ME->Notify;
+	Machine.Mapper.ID         = MapperID;
+	Machine.Mapper.MirrorMode = MirrorMode;
+	Machine.Mapper.Reset      = ME->Reset;
+	Machine.Mapper.Read       = ME->Read;
+	Machine.Mapper.Write      = ME->Write;
+	Machine.Mapper.Notify     = ME->Notify;
 
 	// Allocate RAM.
-	M.RAM = (u8*)calloc(2048, 1);
-	M.CIRAM = (u8*)calloc(2048, 1);
+	Machine.RAM = (u8*)calloc(2048, 1);
+	Machine.CIRAM = (u8*)calloc(2048, 1);
 
 	// Allocate PRG RAM.
-	M.PRGRAMSize = 8192;
-	M.PRGRAM = (u8*)calloc(8192, 1);
+	Machine.PRGRAMSize = 8192;
+	Machine.PRGRAM = (u8*)calloc(8192, 1);
 
 	// Load PRG ROM data.
-	M.PRGROMSize = Header.NumPRG * 16384;
-	M.PRGROM = (u8*)calloc(M.PRGROMSize, 1);
-	if (fread(M.PRGROM, 1, M.PRGROMSize, File) < M.PRGROMSize) {
+	Machine.PRGROMSize = Header.NumPRG * 16384;
+	Machine.PRGROM = (u8*)calloc(Machine.PRGROMSize, 1);
+	if (fread(Machine.PRGROM, 1, Machine.PRGROMSize, File) < Machine.PRGROMSize) {
 		fclose(File);
 		return -1;
 	}
 	
 	// Load CHR ROM data.
 	if (Header.NumCHR > 0) {
-		M.CHRSize = Header.NumCHR * 8192;
-		M.CHR = (u8*)calloc(M.CHRSize, 1);
-		if (fread(M.CHR, 1, M.CHRSize, File) < M.CHRSize) {
+		Machine.CHRSize = Header.NumCHR * 8192;
+		Machine.CHR = (u8*)calloc(Machine.CHRSize, 1);
+		if (fread(Machine.CHR, 1, Machine.CHRSize, File) < Machine.CHRSize) {
 			fclose(File);
 			return -1;
 		}
 	}
 	else {
-		M.CHRSize = 8192;
-		M.CHR = (u8*)calloc(8192, 1);
+		Machine.CHRSize = 8192;
+		Machine.CHR = (u8*)calloc(8192, 1);
 	}
 
 	// Allocate frame buffers.
-	M.PPU.FrameBuffer[0] = (u32*)calloc(256 * 240, sizeof(u32));
-	M.PPU.FrameBuffer[1] = (u32*)calloc(256 * 240, sizeof(u32));
+	Machine.PPU.FrameBuffer[0] = (u32*)calloc(256 * 240, sizeof(u32));
+	Machine.PPU.FrameBuffer[1] = (u32*)calloc(256 * 240, sizeof(u32));
 
-	M.APU.AudioBuffer = (u8*)calloc(8192, 1);
+	Machine.APU.AudioBuffer = (u8*)calloc(8192, 1);
 
-	M.IsLoaded = true;
+	Machine.IsLoaded = true;
 
-	Reset(M);
+	Reset(Machine);
 
 	return 0;
 }

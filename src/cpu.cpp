@@ -806,9 +806,9 @@ static inline bool IsSamePage(u16 A, u16 B)
 	return (A & 0xFF00) == (B & 0xFF00);
 }
 
-void StepCPU(machine& M)
+void StepCPU(machine& Machine)
 {
-	cpu& CPU = M.CPU;
+	cpu& CPU = Machine.CPU;
 	USING_CPU_REGISTERS
 
 	// Previous state of the interrupt flag.  On the real hardware, the CLI, SEI,
@@ -831,26 +831,26 @@ void StepCPU(machine& M)
 		case RESET:
 		case RESET +1:
 			STALL;
-			Read(M, PC);
+			Read(Machine, PC);
 			State++;
 			break;
 		case RESET +2:
 		case RESET +3:
 		case RESET +4:
 			STALL;
-			Read(M, 0x100 | SP--);
+			Read(Machine, 0x100 | SP--);
 			State++;
 			break;
 		case RESET +5:
 			STALL;
-			PC = Read(M, 0xFFFC);
+			PC = Read(Machine, 0xFFFC);
 			BF = true;
 			IF = true;
 			State++;
 			break;
 		case RESET +6:
 			STALL;
-			PC |= Read(M, 0xFFFD) << 8;
+			PC |= Read(Machine, 0xFFFD) << 8;
 			State = FETCH;
 			break;
 
@@ -860,13 +860,13 @@ void StepCPU(machine& M)
 		case FETCH_NO_POLL:
 			STALL;
 			if (CPU.Interrupt) {
-				Read(M, PC);
+				Read(Machine, PC);
 				// Start interrupt sequence for IRQ.
 				State = INTERRUPT_JUMP;
 			}
 			else {
 				InstructionPC = PC;
-				Instruction = InstructionTable[Read(M, PC++)];
+				Instruction = InstructionTable[Read(Machine, PC++)];
 				State = Instruction.InitialState;
 				//printf("I %s\n", OperationNameTable[Instruction.Operation]);
 			}
@@ -877,16 +877,16 @@ void StepCPU(machine& M)
 		// Used for NMI, IRQ, and the BRK instruction.
 		case INTERRUPT_JUMP:
 			STALL;
-			Read(M, PC);
+			Read(Machine, PC);
 			if (Instruction.Operation == BRK) PC++;
 			State++;
 			break;
 		case INTERRUPT_JUMP +1:
-			Write(M, 0x100 | SP--, PC >> 8);
+			Write(Machine, 0x100 | SP--, PC >> 8);
 			State++;
 			break;
 		case INTERRUPT_JUMP +2:
-			Write(M, 0x100 | SP--, PC & 0xFF);
+			Write(Machine, 0x100 | SP--, PC & 0xFF);
 			State++;
 			break;
 		case INTERRUPT_JUMP +3:
@@ -894,38 +894,38 @@ void StepCPU(machine& M)
 				case NMI:
 					Address = 0xFFFA;
 					BF = false;
-					Operate(M, PHP);
+					Operate(Machine, PHP);
 					BF = true;
 					IF = true;
 					break;
 				case IRQ:
 					Address = CPU.InternalNMI ? 0xFFFA : 0xFFFE;
 					BF = false;
-					Operate(M, PHP);
+					Operate(Machine, PHP);
 					IF = true;
 					BF = true;
 					break;
 				case NO_INTERRUPT: // BRK
 					Address = CPU.InternalNMI ? 0xFFFA : 0xFFFE;
 					BF = true;
-					Operate(M, PHP);
+					Operate(Machine, PHP);
 					IF = true;
 					break;
 			}
-			Trace(M);
-			Write(M, 0x100 | SP--, Operand);
+			Trace(Machine);
+			Write(Machine, 0x100 | SP--, Operand);
 			CPU.Interrupt = NO_INTERRUPT;
 			CPU.InternalNMI = false;
 			State++;
 			break;
 		case INTERRUPT_JUMP +4:
 			STALL;
-			PC = Read(M, Address);
+			PC = Read(Machine, Address);
 			State++;
 			break;
 		case INTERRUPT_JUMP +5:
 			STALL;
-			PC |= Read(M, Address+1) << 8;
+			PC |= Read(Machine, Address+1) << 8;
 			// An interrupt sequence does not poll the NMI or IRQ detectors at the end.
 			State = FETCH_NO_POLL;
 			break;
@@ -934,29 +934,29 @@ void StepCPU(machine& M)
 
 		case INTERRUPT_RETURN:
 			STALL;
-			Read(M, PC);
+			Read(Machine, PC);
 			State++;
 			break;
 		case INTERRUPT_RETURN +1:
 			STALL;
-			Read(M, 0x100 | SP++);
+			Read(Machine, 0x100 | SP++);
 			State++;
 			break;
 		case INTERRUPT_RETURN +2:
 			STALL;
-			Operand = Read(M, 0x100 | SP++);
-			Operate(M, PLP);
+			Operand = Read(Machine, 0x100 | SP++);
+			Operate(Machine, PLP);
 			State++;
 			break;
 		case INTERRUPT_RETURN +3:
 			STALL;
-			PC = Read(M, 0x100 | SP++);
+			PC = Read(Machine, 0x100 | SP++);
 			State++;
 			break;
 		case INTERRUPT_RETURN +4:
 			STALL;
-			PC |= Read(M, 0x100 | SP) << 8;
-			Trace(M);
+			PC |= Read(Machine, 0x100 | SP) << 8;
+			Trace(Machine);
 			State = FETCH;
 			break;
 
@@ -964,27 +964,27 @@ void StepCPU(machine& M)
 
 		case SUBROUTINE_JUMP:
 			STALL;
-			Immediate = Read(M, PC++);
+			Immediate = Read(Machine, PC++);
 			State++;
 			break;
 		case SUBROUTINE_JUMP +1:
 			STALL;
-			Read(M, 0x100 | SP);
+			Read(Machine, 0x100 | SP);
 			State++;
 			break;
 		case SUBROUTINE_JUMP +2:
-			Write(M, 0x100 | SP--, PC >> 8);
+			Write(Machine, 0x100 | SP--, PC >> 8);
 			State++;
 			break;
 		case SUBROUTINE_JUMP +3:
-			Write(M, 0x100 | SP--, PC & 0xFF);
+			Write(Machine, 0x100 | SP--, PC & 0xFF);
 			State++;
 			break;
 		case SUBROUTINE_JUMP +4:
 			STALL;
-			Immediate |= Read(M, PC) << 8;
+			Immediate |= Read(Machine, PC) << 8;
 			PC = Immediate;
-			Trace(M);
+			Trace(Machine);
 			State = FETCH;
 			break;
 
@@ -992,28 +992,28 @@ void StepCPU(machine& M)
 
 		case SUBROUTINE_RETURN:
 			STALL;
-			Read(M, PC);
+			Read(Machine, PC);
 			State++;
 			break;
 		case SUBROUTINE_RETURN +1:
 			STALL;
-			Read(M, 0x100 | SP++);
+			Read(Machine, 0x100 | SP++);
 			State++;
 			break;
 		case SUBROUTINE_RETURN +2:
 			STALL;
-			PC = Read(M, 0x100 | SP++);
+			PC = Read(Machine, 0x100 | SP++);
 			State++;
 			break;
 		case SUBROUTINE_RETURN +3:
 			STALL;
-			PC |= Read(M, 0x100 | SP) << 8;
+			PC |= Read(Machine, 0x100 | SP) << 8;
 			State++;
 			break;
 		case SUBROUTINE_RETURN +4:
 			STALL;
-			Read(M, PC++);
-			Trace(M);
+			Read(Machine, PC++);
+			Trace(Machine);
 			State = FETCH;
 			break;
 
@@ -1021,13 +1021,13 @@ void StepCPU(machine& M)
 
 		case STACK_PUSH:
 			STALL;
-			Read(M, PC);
+			Read(Machine, PC);
 			State++;
 			break;
 		case STACK_PUSH +1:
-			Operate(M, Instruction.Operation);
-			Write(M, 0x100 | SP--, Operand);
-			Trace(M);
+			Operate(Machine, Instruction.Operation);
+			Write(Machine, 0x100 | SP--, Operand);
+			Trace(Machine);
 			State = FETCH;
 			break;
 
@@ -1035,19 +1035,19 @@ void StepCPU(machine& M)
 
 		case STACK_PULL:
 			STALL;
-			Read(M, PC);
+			Read(Machine, PC);
 			State++;
 			break;
 		case STACK_PULL +1:
 			STALL;
-			Read(M, 0x100 | SP++);
+			Read(Machine, 0x100 | SP++);
 			State++;
 			break;
 		case STACK_PULL +2:
 			STALL;
-			Operand = Read(M, 0x100 | SP);
-			Operate(M, Instruction.Operation);
-			Trace(M);
+			Operand = Read(Machine, 0x100 | SP);
+			Operate(Machine, Instruction.Operation);
+			Trace(Machine);
 			State = FETCH;
 			break;
 
@@ -1055,9 +1055,9 @@ void StepCPU(machine& M)
 
 		case IMPLIED:
 			STALL;
-			Read(M, PC);
-			Operate(M, Instruction.Operation);
-			Trace(M);
+			Read(Machine, PC);
+			Operate(Machine, Instruction.Operation);
+			Trace(Machine);
 			State = FETCH;
 			break;
 
@@ -1065,10 +1065,10 @@ void StepCPU(machine& M)
 
 		case ACCUMULATOR:
 			STALL;
-			Read(M, PC);
+			Read(Machine, PC);
 			Operand = A;
-			Operate(M, Instruction.Operation);
-			Trace(M);
+			Operate(Machine, Instruction.Operation);
+			Trace(Machine);
 			A = Operand;
 			State = FETCH;
 			break;
@@ -1077,10 +1077,10 @@ void StepCPU(machine& M)
 
 		case IMMEDIATE:
 			STALL;
-			Immediate = Read(M, PC++);
+			Immediate = Read(Machine, PC++);
 			Operand = Immediate & 0xFF;
-			Operate(M, Instruction.Operation);
-			Trace(M);
+			Operate(Machine, Instruction.Operation);
+			Trace(Machine);
 			State = FETCH;
 			break;
 
@@ -1088,7 +1088,7 @@ void StepCPU(machine& M)
 
 		case BRANCH:
 			STALL;
-			Immediate = Read(M, PC++);
+			Immediate = Read(Machine, PC++);
 			// Compute new program counter.
 			Address = PC + Immediate;
 			if (Immediate & 0x80) Address -= 0x100;
@@ -1104,28 +1104,28 @@ void StepCPU(machine& M)
 				case BVC: if ( VF) State = FETCH; break;
 				case BVS: if (!VF) State = FETCH; break;
 			}
-			if (State == FETCH) Trace(M);
+			if (State == FETCH) Trace(Machine);
 			break;
 		case BRANCH +1:
 			STALL;
 			// Dummy read next opcode.
-			Read(M, PC);
+			Read(Machine, PC);
 			State++;
 			// Check for page-crossing branch.
 			if (IsSamePage(Address, PC)) {
 				// Branch target is on the same page, so we're done.
 				PC = Address;
-				Trace(M);
+				Trace(Machine);
 				State = FETCH_NO_POLL;
 			}
 			break;
 		case BRANCH +2:
 			STALL;
 			// Dummy read opcode using old PCH.
-			Read(M, (PC & 0xFF00) | (Address & 0x00FF));
+			Read(Machine, (PC & 0xFF00) | (Address & 0x00FF));
 			// Finally, we have the fixed PC.
 			PC = Address;
-			Trace(M);
+			Trace(Machine);
 			State = FETCH;
 			break;
 
@@ -1133,14 +1133,14 @@ void StepCPU(machine& M)
 
 		case ABSOLUTE_JUMP:
 			STALL;
-			Immediate = Read(M, PC++);
+			Immediate = Read(Machine, PC++);
 			State++;
 			break;
 		case ABSOLUTE_JUMP +1:
 			STALL;
-			Immediate |= Read(M, PC) << 8;
+			Immediate |= Read(Machine, PC) << 8;
 			PC = Immediate;
-			Trace(M);
+			Trace(Machine);
 			State = FETCH;
 			break;
 
@@ -1148,24 +1148,24 @@ void StepCPU(machine& M)
 
 		case INDIRECT_JUMP:
 			STALL;
-			Immediate = Read(M, PC++);
+			Immediate = Read(Machine, PC++);
 			State++;
 			break;
 		case INDIRECT_JUMP +1:
 			STALL;
-			Immediate |= Read(M, PC++) << 8;
+			Immediate |= Read(Machine, PC++) << 8;
 			State++;
 			break;
 		case INDIRECT_JUMP +2:
 			STALL;
-			Address = Read(M, Immediate);
+			Address = Read(Machine, Immediate);
 			State++;
 			break;
 		case INDIRECT_JUMP +3:
 			STALL;
-			Address |= Read(M, (Immediate & 0xFF00) | ((Immediate + 1) & 0x00FF)) << 8;
+			Address |= Read(Machine, (Immediate & 0xFF00) | ((Immediate + 1) & 0x00FF)) << 8;
 			PC = Address;
-			Trace(M);
+			Trace(Machine);
 			State = FETCH;
 			break;
 
@@ -1173,7 +1173,7 @@ void StepCPU(machine& M)
 
 		case ZERO_PAGE:
 			STALL;
-			Immediate = Read(M, PC++);
+			Immediate = Read(Machine, PC++);
 			Address = Immediate;
 			State = Instruction.MemoryOperationState;
 			break;
@@ -1182,12 +1182,12 @@ void StepCPU(machine& M)
 
 		case ZERO_PAGE_X:
 			STALL;
-			Immediate = Read(M, PC++);
+			Immediate = Read(Machine, PC++);
 			State++;
 			break;
 		case ZERO_PAGE_X +1:
 			STALL;
-			Read(M, Immediate);
+			Read(Machine, Immediate);
 			Address = (Immediate + X) & 0xFF;
 			State = Instruction.MemoryOperationState;
 			break;
@@ -1196,12 +1196,12 @@ void StepCPU(machine& M)
 
 		case ZERO_PAGE_Y:
 			STALL;
-			Immediate = Read(M, PC++);
+			Immediate = Read(Machine, PC++);
 			State++;
 			break;
 		case ZERO_PAGE_Y +1:
 			STALL;
-			Read(M, Immediate);
+			Read(Machine, Immediate);
 			Address = (Immediate + Y) & 0xFF;
 			State = Instruction.MemoryOperationState;
 			break;
@@ -1210,12 +1210,12 @@ void StepCPU(machine& M)
 
 		case ABSOLUTE:
 			STALL;
-			Immediate = Read(M, PC++);
+			Immediate = Read(Machine, PC++);
 			State++;
 			break;
 		case ABSOLUTE +1:
 			STALL;
-			Immediate |= Read(M, PC++) << 8;
+			Immediate |= Read(Machine, PC++) << 8;
 			Address = Immediate;
 			State = Instruction.MemoryOperationState;
 			break;
@@ -1224,12 +1224,12 @@ void StepCPU(machine& M)
 
 		case ABSOLUTE_X:
 			STALL;
-			Immediate = Read(M, PC++);
+			Immediate = Read(Machine, PC++);
 			State++;
 			break;
 		case ABSOLUTE_X +1:
 			STALL;
-			Immediate |= Read(M, PC++) << 8;
+			Immediate |= Read(Machine, PC++) << 8;
 			Address = Immediate + X;
 			State++;
 			// If there is no page boundary crossing and we're reading, then we can
@@ -1239,7 +1239,7 @@ void StepCPU(machine& M)
 			break;
 		case ABSOLUTE_X +2:
 			STALL;
-			Read(M, (Immediate & 0xFF00) | (Address & 0x00FF));
+			Read(Machine, (Immediate & 0xFF00) | (Address & 0x00FF));
 			State = Instruction.MemoryOperationState;
 			break;
 
@@ -1247,12 +1247,12 @@ void StepCPU(machine& M)
 
 		case ABSOLUTE_Y:
 			STALL;
-			Immediate = Read(M, PC++);
+			Immediate = Read(Machine, PC++);
 			State++;
 			break;
 		case ABSOLUTE_Y +1:
 			STALL;
-			Immediate |= Read(M, PC++) << 8;
+			Immediate |= Read(Machine, PC++) << 8;
 			Address = Immediate + Y;
 			State++;
 			// If there is no page boundary crossing and we're reading, then we can
@@ -1262,7 +1262,7 @@ void StepCPU(machine& M)
 			break;
 		case ABSOLUTE_Y +2:
 			STALL;
-			Read(M, (Immediate & 0xFF00) | (Address & 0x00FF));
+			Read(Machine, (Immediate & 0xFF00) | (Address & 0x00FF));
 			State = Instruction.MemoryOperationState;
 			break;
 
@@ -1270,23 +1270,23 @@ void StepCPU(machine& M)
 
 		case INDEXED_INDIRECT:
 			STALL;
-			Immediate = Read(M, PC++);
+			Immediate = Read(Machine, PC++);
 			State++;
 			break;
 		case INDEXED_INDIRECT +1:
 			STALL;
-			Read(M, Immediate);
+			Read(Machine, Immediate);
 			Indirect = (Immediate + X) & 0xFF;
 			State++;
 			break;
 		case INDEXED_INDIRECT +2:
 			STALL;
-			Address = Read(M, Indirect);
+			Address = Read(Machine, Indirect);
 			State++;
 			break;
 		case INDEXED_INDIRECT +3:
 			STALL;
-			Address |= Read(M, (Indirect+1) & 0xFF) << 8;
+			Address |= Read(Machine, (Indirect+1) & 0xFF) << 8;
 			State = Instruction.MemoryOperationState;
 			break;
 
@@ -1294,17 +1294,17 @@ void StepCPU(machine& M)
 
 		case INDIRECT_INDEXED:
 			STALL;
-			Immediate = Read(M, PC++);
+			Immediate = Read(Machine, PC++);
 			State++;
 			break;
 		case INDIRECT_INDEXED +1:
 			STALL;
-			Indirect = Read(M, Immediate);
+			Indirect = Read(Machine, Immediate);
 			State++;
 			break;
 		case INDIRECT_INDEXED +2:
 			STALL;
-			Indirect |= Read(M, (Immediate+1) & 0xFF) << 8;
+			Indirect |= Read(Machine, (Immediate+1) & 0xFF) << 8;
 			Address = Indirect + Y;
 			State++;
 			// If there is no page boundary crossing and we're reading, then we can
@@ -1314,7 +1314,7 @@ void StepCPU(machine& M)
 			break;
 		case INDIRECT_INDEXED +3:
 			STALL;
-			Read(M, (Indirect & 0xFF00) | (Address & 0x00FF));
+			Read(Machine, (Indirect & 0xFF00) | (Address & 0x00FF));
 			State = Instruction.MemoryOperationState;
 			break;
 
@@ -1322,9 +1322,9 @@ void StepCPU(machine& M)
 
 		case READ:
 			STALL;
-			Operand = Read(M, Address);
-			Operate(M, Instruction.Operation);
-			Trace(M);
+			Operand = Read(Machine, Address);
+			Operate(Machine, Instruction.Operation);
+			Trace(Machine);
 			State = FETCH;
 			break;
 
@@ -1332,26 +1332,26 @@ void StepCPU(machine& M)
 
 		case MODIFY:
 			STALL;
-			Operand = Read(M, Address);
+			Operand = Read(Machine, Address);
 			State++;
 			break;
 		case MODIFY +1:
-			Write(M, Address, Operand);
-			Operate(M, Instruction.Operation);
+			Write(Machine, Address, Operand);
+			Operate(Machine, Instruction.Operation);
 			State++;
 			break;
 		case MODIFY +2:
-			Write(M, Address, Operand);
-			Trace(M);
+			Write(Machine, Address, Operand);
+			Trace(Machine);
 			State = FETCH;
 			break;
 
 		// --- Write Operation ------------------------------------------------
 
 		case WRITE:
-			Operate(M, Instruction.Operation);
-			Write(M, Address, Operand);
-			Trace(M);
+			Operate(Machine, Instruction.Operation);
+			Write(Machine, Address, Operand);
+			Trace(Machine);
 			State = FETCH;
 			break;
 	}

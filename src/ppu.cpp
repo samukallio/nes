@@ -14,9 +14,9 @@ static inline u16 PaletteOffset(u16 Address)
 	return Address & 0x1F;
 }
 
-u8 ReadPPU(machine& M, u16 Address)
+u8 ReadPPU(machine& Machine, u16 Address)
 {
-	ppu& PPU = M.PPU;
+	ppu& PPU = Machine.PPU;
 
 	u8 BusData = 0;
 	u8 BusMask = 0;
@@ -45,12 +45,12 @@ u8 ReadPPU(machine& M, u16 Address)
 			if (Address < 0x3F00) {
 				BusData = PPU.ReadBuffer;
 				BusMask = 0xFF;
-				PPU.ReadBuffer = ReadMapper(M, Address);
+				PPU.ReadBuffer = ReadMapper(Machine, Address);
 			}
 			else {
 				BusData = PPU.Palette[PaletteOffset(Address)];
 				BusMask = 0x3F;
-				PPU.ReadBuffer = ReadMapper(M, (PPU.V - 0x1000) & 0x3FFF);
+				PPU.ReadBuffer = ReadMapper(Machine, (PPU.V - 0x1000) & 0x3FFF);
 			}
 
 			PPU.V += PPU.VIncrementBy32 ? 32 : 1;
@@ -75,9 +75,9 @@ u8 ReadPPU(machine& M, u16 Address)
 	return PPU.BusData;
 }
 
-void WritePPU(machine& M, u16 Address, u8 Data)
+void WritePPU(machine& Machine, u16 Address, u8 Data)
 {
-	ppu& PPU = M.PPU;
+	ppu& PPU = Machine.PPU;
 
 	// Remember the written data to emulate open-bus behavior.
 	PPU.BusData = Data;
@@ -140,8 +140,8 @@ void WritePPU(machine& M, u16 Address, u8 Data)
 				PPU.V = PPU.T;
 				PPU.W = 0;
 
-				if (!(OldV & 0x1000) && (PPU.V & 0x1000) && M.Mapper.Notify)
-					M.Mapper.Notify(M, PPUFilteredA12Edge);
+				if (!(OldV & 0x1000) && (PPU.V & 0x1000) && Machine.Mapper.Notify)
+					Machine.Mapper.Notify(Machine, PPUFilteredA12Edge);
 			}
 			break;
 		}
@@ -150,7 +150,7 @@ void WritePPU(machine& M, u16 Address, u8 Data)
 				PPU.Palette[PaletteOffset(PPU.V)] = Data;
 			}
 			else {
-				WriteMapper(M, PPU.V, Data);
+				WriteMapper(Machine, PPU.V, Data);
 			}
 
 			PPU.V += PPU.VIncrementBy32 ? 32 : 1;
@@ -159,9 +159,9 @@ void WritePPU(machine& M, u16 Address, u8 Data)
 	}
 }
 
-void StepPPU(machine& M)
+void StepPPU(machine& Machine)
 {
-	ppu& PPU = M.PPU;
+	ppu& PPU = Machine.PPU;
 
 	bool IsRendering = PPU.BackgroundEnable || PPU.SpriteEnable;
 
@@ -249,26 +249,26 @@ void StepPPU(machine& M)
 			case 1: {
 				// Fetch tile pattern index from nametable.
 				u16 Address = 0x2000 | (PPU.V & 0x0FFF);
-				PPU.TilePatternIndex = ReadMapper(M, Address);
+				PPU.TilePatternIndex = ReadMapper(Machine, Address);
 				break;
 			}
 			case 3: {
 				// Fetch tile palette index from attribute table.
 				u16 Address = 0x23C0 | (PPU.V & 0x0C00) | ((PPU.V >> 4) & 0x38) | ((PPU.V >> 2) & 0x07);
 				u8 Shift = ((PPU.V >> 4) & 4) | (PPU.V & 2);
-				PPU.TilePaletteIndex = (ReadMapper(M, Address) >> Shift) & 0x03;
+				PPU.TilePaletteIndex = (ReadMapper(Machine, Address) >> Shift) & 0x03;
 				break;
 			}
 			case 5: {
 				// Fetch low byte of tile pattern.
 				u16 Address = PatternTableAddress(PPU.BackgroundPatternTable, PPU.TilePatternIndex, (PPU.V >> 12) & 0x07, 0);
-				PPU.TilePatternL = ReadMapper(M, Address);
+				PPU.TilePatternL = ReadMapper(Machine, Address);
 				break;
 			}
 			case 7: {
 				// Fetch high byte of tile pattern.
 				u16 Address = PatternTableAddress(PPU.BackgroundPatternTable, PPU.TilePatternIndex, (PPU.V >> 12) & 0x07, 1);
-				PPU.TilePatternH = ReadMapper(M, Address);
+				PPU.TilePatternH = ReadMapper(Machine, Address);
 				break;
 			}
 			case 0: {
@@ -314,8 +314,8 @@ void StepPPU(machine& M)
 				else
 					Address = PatternTableAddress(PPU.SpritePatternTable, TileIndex, Row, 0);
 
-				u8 PatternL = ReadMapper(M, Address);
-				u8 PatternH = ReadMapper(M, Address+8);
+				u8 PatternL = ReadMapper(Machine, Address);
+				u8 PatternH = ReadMapper(Machine, Address+8);
 
 				// Make the color data for the visible sprite row.
 				u8 ColorBase = (Flags & 0x03) << 2;
@@ -419,7 +419,7 @@ void StepPPU(machine& M)
 	// memory accesses are not emulated accurately, we instead detect an
 	// (approximately) equivalent condition and notify the mapper.
 	if (IsRendering && IsFetchY && PPU.ScanX == 260)
-		if (M.Mapper.Notify) M.Mapper.Notify(M, PPUFilteredA12Edge);
+		if (Machine.Mapper.Notify) Machine.Mapper.Notify(Machine, PPUFilteredA12Edge);
 
 	//
 	PPU.MasterCycle += 4;
