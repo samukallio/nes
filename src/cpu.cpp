@@ -1359,7 +1359,7 @@ void StepCPU(machine* M)
 			// CLI, SEI and PLP modify the interrupt flag after polling for interrupts.
 			if (Instruction.Operation == CLI ||
 			    Instruction.Operation == SEI ||
-				Instruction.Operation == PLP) {
+			    Instruction.Operation == PLP) {
 				// Trigger IRQ, if interrupt flag was set.
 				if (!PreviousIF) CPU->Interrupt = IRQ;
 			}
