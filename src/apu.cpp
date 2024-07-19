@@ -223,7 +223,7 @@ void StepAPU(machine* M)
 		if (APU->FrameCycle == 29830)
 			APU->FrameCycle = 0;
 	}
-	
+
 	if (APU->FrameCycle == 0)
 		APU->Frame += 1;
 

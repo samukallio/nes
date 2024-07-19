@@ -347,20 +347,9 @@ static void Operate(machine* Machine, u8 Operation)
 	u32 R;
 
 	switch (Operation) {
-		case ISC: // unofficial
-			M++;
-			[[fallthrough]];
-		case SBC:
 		case ADC:
-			if (Operation == ADC) {
-				R = A + M + CF;
-				VF = ~(A ^ M) & (A ^ R) & 0x80;
-			}
-			else {
-				// SBC and ISC.
-				R = A + (M ^ 0xFF) + CF;
-				VF = ~(A ^ (M ^ 0xFF)) & (A ^ R) & 0x80;
-			}
+			R = A + M + CF;
+			VF = ~(A ^ M) & (A ^ R) & 0x80;
 			ZF = !(R & 0xFF);
 			NF = R & 0x80;
 			CF = R > 0xFF;
@@ -396,15 +385,6 @@ static void Operate(machine* Machine, u8 Operation)
 			VF = ((A >> 1) ^ A) & 0x20;
 			ZF = A == 0;
 			NF = A & 0x80;
-			break;
-
-		case SLO: // unofficial
-			R = M << 1;
-			M = R;
-			A |= M;
-			ZF = A == 0;
-			NF = A & 0x80;
-			CF = R > 0xFF;
 			break;
 
 		case ASL:
@@ -516,10 +496,25 @@ static void Operate(machine* Machine, u8 Operation)
 			NF = Y & 0x80;
 			break;
 
+		case ISC: // unofficial
+			M++;
+			R = A + (M ^ 0xFF) + CF;
+			VF = ~(A ^ (M ^ 0xFF)) & (A ^ R) & 0x80;
+			ZF = !(R & 0xFF);
+			NF = R & 0x80;
+			CF = R > 0xFF;
+			A = R;
+			break;
+
 		case LAX: // unofficial
+			A = M;
+			X = A;
+			ZF = A == 0;
+			NF = A & 0x80;
+			break;
+
 		case LDA:
 			A = M;
-			if (Operation == LAX) X = A;
 			ZF = A == 0;
 			NF = A & 0x80;
 			break;
@@ -534,14 +529,6 @@ static void Operate(machine* Machine, u8 Operation)
 			Y = M;
 			ZF = Y == 0;
 			NF = Y & 0x80;
-			break;
-
-		case SRE: // unofficial
-			CF = M & 0x01;
-			M >>= 1;
-			A ^= M;
-			ZF = A == 0;
-			NF = A & 0x80;
 			break;
 
 		case LSR:
@@ -609,11 +596,9 @@ static void Operate(machine* Machine, u8 Operation)
 			break;
 
 		case RRA: // unofficial
-			// rotate operand
 			R = (M >> 1) | CF << 7;
 			CF = M & 1;
 			M = R;
-			// add with carry
 			R = A + M + CF;
 			VF = ~(A ^ M) & (A ^ R) & 0x80;
 			ZF = !(R & 0xFF);
@@ -630,6 +615,19 @@ static void Operate(machine* Machine, u8 Operation)
 			NF = M & 0x80;
 			break;
 
+		case SAX: // unofficial
+			M = A & X;
+			break;
+
+		case SBC:
+			R = A + (M ^ 0xFF) + CF;
+			VF = ~(A ^ (M ^ 0xFF)) & (A ^ R) & 0x80;
+			ZF = !(R & 0xFF);
+			NF = R & 0x80;
+			CF = R > 0xFF;
+			A = R;
+			break;
+
 		case SEC:
 			CF = true;
 			break;
@@ -642,8 +640,21 @@ static void Operate(machine* Machine, u8 Operation)
 			IF = true;
 			break;
 
-		case SAX: // unofficial
-			M = A & X;
+		case SLO: // unofficial
+			R = M << 1;
+			M = R;
+			A |= M;
+			ZF = A == 0;
+			NF = A & 0x80;
+			CF = R > 0xFF;
+			break;
+
+		case SRE: // unofficial
+			CF = M & 0x01;
+			M >>= 1;
+			A ^= M;
+			ZF = A == 0;
+			NF = A & 0x80;
 			break;
 
 		case STA:
